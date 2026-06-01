@@ -49,11 +49,12 @@ Phoenix Channels — one topic per gallery room
   ├── handle_in("move", %{x, z}) → broadcast position
   └── handle_in("chat:new", %{text}) → broadcast message
         ↕ Ecto / PostgreSQL
-Galleries → has_many Rooms → has_many ArtworkPlacements
+Galleries (with template) → has_many ArtworkPlacements → Artworks
+GalleryTemplates → has_many LayoutSlots (predefined frame positions)
 Users (wallet-based, SIWE later)
 ```
 
-Each gallery room is one Phoenix Channel topic (`room:{gallery_id}`). Presence tracks all connected avatars. Positions broadcast at ~10-30Hz from the Three.js client.
+Each gallery is one walkable space and one Phoenix Channel topic (`room:{gallery_id}` — "room" is naming only, not a DB table). Presence tracks all connected avatars. Positions broadcast at ~10-30Hz from the Three.js client.
 
 ### Two viewing modes (NOT mobile fallback):
 - **Gallery mode**: Full 3D walkable room via Three.js
@@ -61,30 +62,35 @@ Each gallery room is one Phoenix Channel topic (`room:{gallery_id}`). Presence t
 
 Both are legitimate first-class experiences. Magazine is for quick browsing, gallery is for events and沉浸.
 
-## Database Schema (planned)
+## Database Schema
 
 ```
-galleries
-  - id, name, slug, description
-  - wall_color (hex), frame_style (enum)
-  - owner_id (nullable until auth)
-  - inserted_at, updated_at
+gallery_templates
+  - slug (minimal_4, show_32, …), name, slot_count
+  - layout (rectangular | l_shaped | open_plan), width, depth
 
-rooms
-  - id, gallery_id (FK)
-  - layout (enum: "rectangular", "l_shaped", "open_plan")
-  - width, depth (dimensions for generation)
+layout_slots
+  - template_id, slot_index, wall (back | left | right)
+  - u, v (normalized 0..1), rotation_y, scale
+
+galleries
+  - name, slug, description, wall_color, frame_style
+  - template_id, width_override, depth_override (optional)
+  - owner_id (nullable until auth)
+
+artworks
+  - artwork_url, title, artist, external_id, aspect_ratio
 
 artwork_placements
-  - id, room_id (FK), artwork_url, title, artist
-  - position_x, position_y, position_z
-  - rotation, scale, wall ("back", "left", "right")
+  - gallery_id, artwork_id, display_order, kind (slot | extra)
+  - layout_slot_id (required for slot; unique per gallery)
+  - override_wall, override_u, override_v, … (extras only)
 
 users
-  - id, wallet_address (unique)
-  - display_name, avatar_color
-  - inserted_at
+  - wallet_address (unique), display_name, avatar_color
 ```
+
+Slot placements use predefined `layout_slots`; world x/y/z is computed by `Galleries.PlacementResolver` at read time. Extras (max 4 per gallery) use override coordinates.
 
 ## Conventions
 
