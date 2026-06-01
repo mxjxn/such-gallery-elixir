@@ -9,6 +9,7 @@ defmodule SuchGalleryElixir.Application do
   def start(_type, _args) do
     children = [
       SuchGalleryElixirWeb.Telemetry,
+      SuchGalleryElixir.Repo,
       {DNSCluster, query: Application.get_env(:such_gallery_elixir, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: SuchGalleryElixir.PubSub},
       # Start a worker by calling: SuchGalleryElixir.Worker.start_link(arg)

@@ -8,6 +8,7 @@
 import Config
 
 config :such_gallery_elixir,
+  ecto_repos: [SuchGalleryElixir.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # Configures the endpoint
