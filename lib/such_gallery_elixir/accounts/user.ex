@@ -24,7 +24,7 @@ defmodule SuchGalleryElixir.Accounts.User do
     |> cast(attrs, [:wallet_address, :display_name, :avatar_color])
     |> validate_required([:wallet_address])
     |> unique_constraint(:wallet_address)
-    |> validate_length(:wallet_address, min: 2, max: 64)
+    |> validate_length(:wallet_address, is: 42)
     |> validate_length(:display_name, max: 100)
     |> validate_format(:avatar_color, ~r/^#[0-9A-Fa-f]{6}$/,
       message: "must be a hex color like #ff5500"

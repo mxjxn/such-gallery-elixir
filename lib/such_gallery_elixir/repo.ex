@@ -2,7 +2,7 @@ defmodule SuchGalleryElixir.Repo do
   @moduledoc """
   Ecto repository for PostgreSQL.
 
-  All gallery, room, artwork, and user persistence goes through this module.
+  All gallery, artwork, template, and user persistence goes through this module.
   """
 
   use Ecto.Repo,

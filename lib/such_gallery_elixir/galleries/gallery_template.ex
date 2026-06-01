@@ -19,6 +19,7 @@ defmodule SuchGalleryElixir.Galleries.GalleryTemplate do
     field :depth, :float
 
     has_many :layout_slots, SuchGalleryElixir.Galleries.LayoutSlot, foreign_key: :template_id
+    has_many :galleries, SuchGalleryElixir.Galleries.Gallery, foreign_key: :template_id
 
     timestamps(type: :utc_datetime)
   end
