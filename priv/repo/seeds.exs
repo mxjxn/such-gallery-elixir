@@ -1,8 +1,6 @@
 # Script for populating the database. Run with:
 #
 #     mix run priv/repo/seeds.exs
-#
-# Inside the script, use `SuchGalleryElixir.Repo` and schemas as needed.
 
-# Seeds will be added once galleries and rooms exist.
-:ok
+Code.require_file("seeds/templates.exs", __DIR__)
+SuchGalleryElixir.Seeds.Templates.run()
