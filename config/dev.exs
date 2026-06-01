@@ -51,6 +51,15 @@ config :such_gallery_elixir, SuchGalleryElixirWeb.Endpoint,
     ]
   ]
 
+config :such_gallery_elixir, SuchGalleryElixir.Repo,
+  username: "postgres",
+  password: "postgres",
+  hostname: "localhost",
+  database: "such_gallery_elixir_dev",
+  stacktrace: true,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
+
 # Enable dev routes for dashboard and mailbox
 config :such_gallery_elixir, dev_routes: true
 

@@ -31,7 +31,8 @@ defmodule SuchGalleryElixirWeb.ConnCase do
     end
   end
 
-  setup _tags do
+  setup tags do
+    SuchGalleryElixir.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

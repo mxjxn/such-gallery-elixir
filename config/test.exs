@@ -7,6 +7,14 @@ config :such_gallery_elixir, SuchGalleryElixirWeb.Endpoint,
   secret_key_base: "khRXb6z8kuyEg4hG8DmPGlT8er+DMwA8Gewx8ZOVr31sE1TioEtmHuo2EvqDrrn6",
   server: false
 
+config :such_gallery_elixir, SuchGalleryElixir.Repo,
+  username: "postgres",
+  password: "postgres",
+  hostname: "localhost",
+  database: "such_gallery_elixir_test#{System.get_env("MIX_TEST_PARTITION")}",
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: System.schedulers_online() * 2
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 
