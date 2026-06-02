@@ -32,3 +32,6 @@
 - Complex avatar customization (colored spheres + names for launch)
 - Marketplace / economy for galleries
 - Advanced lighting / PBR materials
+
+### Future notes
+- **Chat → Farcaster casts:** Room chat may eventually publish as Farcaster casts (not only in-app PubSub/Postgres). Each gallery (or thread) would map to a **parent cast id**; user messages become **reply casts** targeting that parent. Postgres `chat_messages` stays useful as local cache/history and offline fallback until/unless reads move to a Farcaster indexer. Design for: `parent_cast_id` on gallery (or dedicated channel record), optional `cast_hash` on `chat_messages`, write path = persist locally → publish cast → PubSub for live UI.

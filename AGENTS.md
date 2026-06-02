@@ -88,9 +88,14 @@ artwork_placements
 
 users
   - wallet_address (unique), display_name, avatar_color
+
+chat_messages
+  - gallery_id, guest_name, body, inserted_at (recent history on mount; not cached separately)
 ```
 
 Slot placements use predefined `layout_slots`; world x/y/z is computed by `Galleries.PlacementResolver` at read time. Extras (max 4 per gallery) use override coordinates.
+
+**Chat (later):** Messages may become **Farcaster casts** replying to a gallery **parent cast id** — see `TASKS.md` → Future notes. Until then: Postgres = source of truth, PubSub = live fan-out only (no message cache layer).
 
 ## Conventions
 
