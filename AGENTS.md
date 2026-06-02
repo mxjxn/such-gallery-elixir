@@ -19,11 +19,11 @@ This is a portfolio piece for a Director of Software Engineering role. Ship by e
 
 ## Current State
 
-Phoenix scaffold is committed and compiling. No database, no channels, no Three.js yet.
+Phoenix app with PostgreSQL, slot-based galleries, Presence, RoomChannel, and magazine LiveView. Three.js client not started.
 
 ### What exists:
-- `lib/such_gallery_elixir/application.ex` — starts Endpoint + PubSub
-- `lib/such_gallery_elixir_web/router.ex` — basic routes, no socket mounts
+- `lib/such_gallery_elixir/application.ex` — Repo, PubSub, Presence, Endpoint
+- `lib/such_gallery_elixir_web/router.ex` — `/`, `/gallery/:slug`, `/socket` via Endpoint
 - `lib/such_gallery_elixir_web/endpoint.ex` — Bandit, code reloader, Tailwind watcher
 - `mix.exs` — Phoenix deps, **no Ecto** (scaffolded with `--no-ecto`)
 - `config/dev.exs` — PostgreSQL config commented out, not yet wired
@@ -140,12 +140,9 @@ config :such_gallery_elixir, SuchGalleryElixir.Repo,
 
 Then `mix ecto.create` (PostgreSQL must be running).
 
-### Step 2: Migrations + Schemas
-- `mix ecto.gen.migration create_galleries`
-- `mix ecto.gen.migration create_rooms`
-- `mix ecto.gen.migration create_artwork_placements`
-- `mix ecto.gen.migration create_users`
-- Write corresponding schemas in `lib/such_gallery_elixir/`
+### Step 2: Migrations + Schemas (done — templates/slots, no `rooms` table)
+- `gallery_templates`, `layout_slots`, `galleries`, `artworks`, `artwork_placements`, `users`
+- `SuchGalleryElixir.Galleries` context with slot placement + `PlacementResolver`
 
 ### Step 3: Presence
 - `lib/such_gallery_elixir_web/presence.ex`
@@ -159,17 +156,16 @@ Then `mix ecto.create` (PostgreSQL must be running).
 - `handle_in("chat:new", %{"text" => text})` — broadcast to topic
 - `handle_info(:after_join)` — push current Presence state to new joiner
 
-### Step 5: Socket + Router
+### Step 5: Socket + Router (done)
 - `lib/such_gallery_elixir_web/channels/user_socket.ex`
-- Mount in `router.ex`: `socket "/live", SuchGalleryElixirWeb.LiveViewSocket`
-- Channel route: `channel "room:*", SuchGalleryElixirWeb.RoomChannel`
+- `socket "/socket"` on Endpoint; `channel "room:*", RoomChannel`
 
 ### Step 6: LiveView Gallery Page
 - `lib/such_gallery_elixir_web/live/gallery_live/show.ex`
 - Renders room container, connects to Presence, displays chat
 - Hook into RoomChannel via `{:ok, _topic, _socket}` from JS client
 
-### Step 7: Three.js Client
+### Step 7: Three.js Client (deferred — Phase 1c)
 - Set up Vite in `assets/` or a separate `client/` directory
 - Basic room geometry (floor plane, walls)
 - WASD movement, pointer lock

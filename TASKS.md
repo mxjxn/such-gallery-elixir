@@ -1,14 +1,15 @@
 ## June 2026 — Ship Month
 
 ### Phase 1: Skeleton (June 1-10)
-- [ ] Phoenix project scaffold + PostgreSQL
-- [ ] Schema: galleries, artwork, users, rooms
-- [ ] Phoenix Channel for single room state
-- [ ] Presence module (avatar positions, names)
-- [ ] Chat (broadcast messages to room)
-- [ ] Three.js: basic room (floor, walls, artwork planes)
-- [ ] WASD movement + position broadcast
-- [ ] Mobile: 2D grid view with presence + chat
+- [x] Phoenix project scaffold + PostgreSQL
+- [x] Schema: gallery templates, slots, galleries, artworks, users
+- [x] Phoenix Channel for single room state (`room:{gallery_id}`)
+- [x] Presence module (avatar positions, names)
+- [x] Chat (broadcast messages to room)
+- [x] Magazine LiveView at `/gallery/:slug` (presence + chat via JS hook)
+- [ ] Three.js: basic room (floor, walls, artwork planes) — Phase 1c
+- [ ] WASD movement + position broadcast — Phase 1c
+- [ ] Mobile polish for 2D grid — optional
 
 ### Phase 2: Gallery System (June 11-20)
 - [ ] Dynamic gallery generation from image URLs
