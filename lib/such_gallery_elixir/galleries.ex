@@ -18,18 +18,53 @@ defmodule SuchGalleryElixir.Galleries do
 
   @max_extras 4
 
+  @gallery_preloads [
+    :owner,
+    template: :layout_slots,
+    artwork_placements: [:artwork, :layout_slot]
+  ]
+
   @doc """
   Fetches a gallery by slug with template, slots, placements, and artworks preloaded.
   """
   def get_gallery_by_slug(slug) when is_binary(slug) do
     Gallery
     |> where([g], g.slug == ^slug)
-    |> preload([
-      :owner,
-      template: :layout_slots,
-      artwork_placements: [:artwork, :layout_slot]
-    ])
+    |> preload(^@gallery_preloads)
     |> Repo.one()
+  end
+
+  @doc """
+  Fetches a gallery by id with the same preloads as `get_gallery_by_slug/1`.
+  """
+  def get_gallery_by_id(id) when is_integer(id) do
+    Gallery
+    |> where([g], g.id == ^id)
+    |> preload(^@gallery_preloads)
+    |> Repo.one()
+  end
+
+  @doc """
+  Builds a JSON-serializable gallery payload for channel join (includes resolved placements).
+  """
+  def gallery_state(%Gallery{} = gallery) do
+    gallery = Repo.preload(gallery, @gallery_preloads)
+    placements = list_placements(gallery)
+
+    %{
+      id: gallery.id,
+      name: gallery.name,
+      slug: gallery.slug,
+      wall_color: gallery.wall_color,
+      frame_style: gallery.frame_style,
+      width: Gallery.width(gallery),
+      depth: Gallery.depth(gallery),
+      template: %{
+        layout: gallery.template.layout,
+        slot_count: gallery.template.slot_count
+      },
+      placements: resolve_placement_transforms(placements, gallery)
+    }
   end
 
   @doc "Lists placements for a gallery ordered for magazine mode."
