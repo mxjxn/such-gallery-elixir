@@ -22,6 +22,7 @@ defmodule SuchGalleryElixir.Galleries.Gallery do
     belongs_to :template, SuchGalleryElixir.Galleries.GalleryTemplate
     belongs_to :owner, SuchGalleryElixir.Accounts.User
     has_many :artwork_placements, SuchGalleryElixir.Galleries.ArtworkPlacement
+    has_many :chat_messages, SuchGalleryElixir.Galleries.ChatMessage
 
     timestamps(type: :utc_datetime)
   end

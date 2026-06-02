@@ -8,6 +8,7 @@ defmodule SuchGalleryElixir.Galleries do
   alias SuchGalleryElixir.Galleries.{
     Artwork,
     ArtworkPlacement,
+    ChatMessage,
     Gallery,
     GalleryTemplate,
     LayoutSlot,
@@ -17,6 +18,7 @@ defmodule SuchGalleryElixir.Galleries do
   alias SuchGalleryElixir.Repo
 
   @max_extras 4
+  @default_chat_limit 30
 
   @gallery_preloads [
     :owner,
@@ -159,6 +161,47 @@ defmodule SuchGalleryElixir.Galleries do
       _ -> {:error, :slot_taken}
     end
   end
+
+  @doc """
+  Returns the most recent chat messages for a gallery, oldest first (for UI).
+  """
+  def list_recent_chat_messages(gallery_id, limit \\ @default_chat_limit)
+      when is_integer(gallery_id) and is_integer(limit) do
+    ChatMessage
+    |> where([m], m.gallery_id == ^gallery_id)
+    |> order_by([m], desc: m.inserted_at)
+    |> limit(^limit)
+    |> Repo.all()
+    |> Enum.reverse()
+    |> Enum.map(&chat_message_to_map/1)
+  end
+
+  @doc """
+  Persists a chat message and returns the map shape used by LiveView and channels.
+  """
+  def create_chat_message(gallery_id, guest_name, body)
+      when is_integer(gallery_id) and is_binary(guest_name) and is_binary(body) do
+    attrs = %{gallery_id: gallery_id, guest_name: guest_name, body: String.trim(body)}
+
+    %ChatMessage{}
+    |> ChatMessage.changeset(attrs)
+    |> Repo.insert()
+    |> case do
+      {:ok, message} -> {:ok, chat_message_to_map(message)}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc "Maps a persisted chat row to the realtime/UI message shape."
+  def chat_message_to_map(%ChatMessage{} = message) do
+    %{
+      name: message.guest_name,
+      text: message.body,
+      at: DateTime.to_iso8601(message.inserted_at)
+    }
+  end
+
+  def chat_message_to_map(%{name: _, text: _, at: _} = message), do: message
 
   defp ensure_extra_capacity(%Gallery{id: gallery_id}) do
     count =
