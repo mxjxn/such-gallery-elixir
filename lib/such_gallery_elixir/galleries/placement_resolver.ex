@@ -99,6 +99,13 @@ defmodule SuchGalleryElixir.Galleries.PlacementResolver do
           (u - 0.5) * depth,
           extra_rotation - :math.pi() / 2,
           scale }
+
+      :front ->
+        { (u - 0.5) * width,
+          v * @wall_height,
+          depth / 2 - 0.01,
+          extra_rotation + :math.pi(),
+          scale }
     end
   end
 end

@@ -84,5 +84,24 @@ defmodule SuchGalleryElixir.Galleries.PlacementTest do
       assert resolved.wall == :back
       assert resolved.artwork_url == artwork.artwork_url
     end
+
+    test "resolves front wall coordinates" do
+      gallery = GalleriesFixtures.gallery_fixture()
+      artwork = GalleriesFixtures.artwork_fixture()
+
+      {:ok, placement} =
+        Galleries.add_extra(gallery, artwork, %{
+          display_order: 1,
+          override_wall: :front,
+          override_u: 0.5,
+          override_v: 0.5
+        })
+
+      placement = Repo.preload(placement, :artwork)
+      resolved = PlacementResolver.resolve(placement, gallery)
+
+      assert resolved.wall == :front
+      assert_in_delta resolved.z, Gallery.depth(gallery) / 2 - 0.01, 0.001
+    end
   end
 end

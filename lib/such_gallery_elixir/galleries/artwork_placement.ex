@@ -9,7 +9,7 @@ defmodule SuchGalleryElixir.Galleries.ArtworkPlacement do
   import Ecto.Changeset
 
   @kinds ~w(slot extra)a
-  @walls ~w(back left right)a
+  @walls ~w(back left right front)a
 
   schema "artwork_placements" do
     field :kind, Ecto.Enum, values: @kinds

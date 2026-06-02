@@ -4,6 +4,8 @@
 
 Code.require_file("seeds/templates.exs", __DIR__)
 Code.require_file("seeds/demo.exs", __DIR__)
+Code.require_file("seeds/square.exs", __DIR__)
 
 SuchGalleryElixir.Seeds.Templates.run()
 SuchGalleryElixir.Seeds.Demo.run()
+SuchGalleryElixir.Seeds.Square.run()

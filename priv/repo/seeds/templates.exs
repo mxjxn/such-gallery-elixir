@@ -24,6 +24,14 @@ defmodule SuchGalleryElixir.Seeds.Templates do
       layout: :rectangular,
       width: 16.0,
       depth: 12.0
+    },
+    %{
+      slug: "square_32",
+      name: "Square room (8 per wall)",
+      slot_count: 32,
+      layout: :rectangular,
+      width: 12.0,
+      depth: 12.0
     }
   ]
 
@@ -66,23 +74,52 @@ defmodule SuchGalleryElixir.Seeds.Templates do
   end
 
   defp insert_slots(template, count) do
-    slots =
-      for index <- 0..(count - 1) do
-        u = (index + 1) / (count + 1)
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-        %{
-          template_id: template.id,
-          slot_index: index,
-          wall: :back,
-          u: u,
-          v: 0.5,
-          rotation_y: 0.0,
-          scale: 1.0,
-          inserted_at: DateTime.utc_now() |> DateTime.truncate(:second),
-          updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
-        }
+    slots =
+      case template.slug do
+        "square_32" -> square_wall_slots(template.id, now)
+        _ -> back_wall_slots(template.id, count, now)
       end
 
     Repo.insert_all(LayoutSlot, slots)
+  end
+
+  defp back_wall_slots(template_id, count, now) do
+    for index <- 0..(count - 1) do
+      u = (index + 1) / (count + 1)
+
+      %{
+        template_id: template_id,
+        slot_index: index,
+        wall: :back,
+        u: u,
+        v: 0.5,
+        rotation_y: 0.0,
+        scale: 1.0,
+        inserted_at: now,
+        updated_at: now
+      }
+    end
+  end
+
+  # Square room: 8 frames on each of 4 walls (32 total).
+  defp square_wall_slots(template_id, now) do
+    walls = [:back, :right, :front, :left]
+
+    for {wall, wall_index} <- Enum.with_index(walls),
+        index <- 0..7 do
+      %{
+        template_id: template_id,
+        slot_index: wall_index * 8 + index,
+        wall: wall,
+        u: (index + 1) / 9.0,
+        v: 0.5,
+        rotation_y: 0.0,
+        scale: 1.0,
+        inserted_at: now,
+        updated_at: now
+      }
+    end
   end
 end

@@ -9,7 +9,7 @@ defmodule SuchGalleryElixir.Galleries.LayoutSlot do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @walls ~w(back left right)a
+  @walls ~w(back left right front)a
 
   schema "layout_slots" do
     field :slot_index, :integer
