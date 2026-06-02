@@ -12,6 +12,7 @@ defmodule SuchGalleryElixir.Application do
       SuchGalleryElixir.Repo,
       {DNSCluster, query: Application.get_env(:such_gallery_elixir, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: SuchGalleryElixir.PubSub},
+      SuchGalleryElixirWeb.Presence,
       # Start a worker by calling: SuchGalleryElixir.Worker.start_link(arg)
       # {SuchGalleryElixir.Worker, arg},
       # Start to serve requests, typically the last entry
