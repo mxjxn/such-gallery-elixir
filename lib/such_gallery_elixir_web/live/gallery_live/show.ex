@@ -27,6 +27,8 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Show do
 
         guest_name = "Guest-#{:rand.uniform(9999)}"
 
+        chat_messages = Galleries.list_recent_chat_messages(gallery.id)
+
         socket =
           socket
           |> assign(:page_title, gallery.name)
@@ -34,7 +36,7 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Show do
           |> assign(:placements, placements)
           |> assign(:guest_name, guest_name)
           |> assign(:guest_color, random_color())
-          |> assign(:chat_messages, [])
+          |> assign(:chat_messages, chat_messages)
           |> assign(:presences, [])
 
         if connected?(socket) do
@@ -46,27 +48,82 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Show do
   end
 
   @impl true
-  def handle_event("send_chat", %{"text" => text}, socket) do
-    text = String.trim(text)
+  def handle_event("send_chat", params, socket) do
+    case chat_text(params) do
+      "" ->
+        {:noreply, socket}
 
-    if text == "" do
-      {:noreply, socket}
-    else
-      {:noreply, push_event(socket, "chat_send", %{text: text})}
+      text ->
+        case Galleries.create_chat_message(
+               socket.assigns.gallery.id,
+               socket.assigns.guest_name,
+               text
+             ) do
+          {:ok, message} ->
+            Phoenix.PubSub.broadcast_from(
+              SuchGalleryElixir.PubSub,
+              self(),
+              pubsub_topic(socket.assigns.gallery.id),
+              {:chat, message}
+            )
+
+            {:noreply, append_chat(socket, message)}
+
+          {:error, _changeset} ->
+            {:noreply, socket}
+        end
     end
   end
 
   @impl true
   def handle_event("presence_update", %{"presences" => presences}, socket) do
+    {:noreply, assign(socket, :presences, normalize_presences(presences))}
+  end
+
+  @impl true
+  def handle_info({:presence_update, presences}, socket) do
     {:noreply, assign(socket, :presences, presences)}
   end
 
   @impl true
   def handle_info({:chat, message}, socket) do
-    {:noreply, assign(socket, :chat_messages, socket.assigns.chat_messages ++ [message])}
+    {:noreply, append_chat(socket, message)}
   end
 
   defp pubsub_topic(gallery_id), do: "gallery:#{gallery_id}"
+
+  defp chat_text(%{"text" => text}) when is_binary(text), do: String.trim(text)
+  defp chat_text(%{"chat" => %{"text" => text}}) when is_binary(text), do: String.trim(text)
+  defp chat_text(_), do: ""
+
+  defp append_chat(socket, message) do
+    assign(socket, :chat_messages, socket.assigns.chat_messages ++ [normalize_chat(message)])
+  end
+
+  defp normalize_chat(message) do
+    %{
+      name: message[:name] || message["name"] || "Guest",
+      text: message[:text] || message["text"] || "",
+      at: message[:at] || message["at"]
+    }
+  end
+
+  defp normalize_presences(presences) when is_list(presences) do
+    presences
+    |> List.flatten()
+    |> Enum.filter(&is_map/1)
+    |> Enum.map(fn p ->
+      %{
+        "id" => to_string(p["id"] || p[:id] || ""),
+        "name" => p["name"] || p[:name] || "Guest",
+        "color" => p["color"] || p[:color] || "#ff5500",
+        "x" => p["x"] || p[:x] || 0,
+        "z" => p["z"] || p[:z] || 0
+      }
+    end)
+  end
+
+  defp normalize_presences(_), do: []
 
   defp random_color do
     hue = :rand.uniform(360)

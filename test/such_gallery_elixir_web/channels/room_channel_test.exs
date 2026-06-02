@@ -19,6 +19,8 @@ defmodule SuchGalleryElixirWeb.RoomChannelTest do
 
   describe "join/3" do
     test "pushes gallery and presence state after join", %{gallery: gallery} do
+      Phoenix.PubSub.subscribe(SuchGalleryElixir.PubSub, "gallery:#{gallery.id}")
+
       {:ok, _reply, socket} = join_room(gallery.id, %{"name" => "Ada", "color" => "#3366cc"})
 
       assert_push "gallery_state", state
@@ -27,6 +29,9 @@ defmodule SuchGalleryElixirWeb.RoomChannelTest do
 
       assert_push "presence_state", presences
       assert Map.has_key?(presences, socket.id)
+
+      assert_receive {:presence_update, visitors}
+      assert Enum.any?(visitors, &(&1["name"] == "Ada"))
     end
 
     test "rejects unknown gallery" do

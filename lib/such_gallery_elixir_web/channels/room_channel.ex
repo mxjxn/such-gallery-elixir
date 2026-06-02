@@ -34,8 +34,15 @@ defmodule SuchGalleryElixirWeb.RoomChannel do
   def handle_info(:after_join, socket) do
     push(socket, "gallery_state", Galleries.gallery_state(socket.assigns.gallery))
     push(socket, "presence_state", Presence.list(socket))
+    broadcast_presence(socket)
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def terminate(_reason, socket) do
+    broadcast_presence(socket)
+    :ok
   end
 
   @impl true
@@ -58,21 +65,21 @@ defmodule SuchGalleryElixirWeb.RoomChannel do
     else
       meta = presence_meta_for_socket(socket)
 
-      message = %{
-        name: meta.name,
-        text: text,
-        at: DateTime.utc_now() |> DateTime.to_iso8601()
-      }
+      case Galleries.create_chat_message(socket.assigns.gallery_id, meta.name, text) do
+        {:ok, message} ->
+          broadcast!(socket, "chat:new", message)
 
-      broadcast!(socket, "chat:new", message)
+          Phoenix.PubSub.broadcast(
+            SuchGalleryElixir.PubSub,
+            pubsub_topic(socket.assigns.gallery_id),
+            {:chat, message}
+          )
 
-      Phoenix.PubSub.broadcast(
-        SuchGalleryElixir.PubSub,
-        pubsub_topic(socket.assigns.gallery_id),
-        {:chat, message}
-      )
+          {:reply, {:ok, %{}}, socket}
 
-      {:reply, {:ok, %{}}, socket}
+        {:error, _} ->
+          {:reply, {:error, %{reason: "invalid_message"}}, socket}
+      end
     end
   end
 
@@ -113,4 +120,28 @@ defmodule SuchGalleryElixirWeb.RoomChannel do
   defp parse_float(_), do: 0.0
 
   defp pubsub_topic(gallery_id), do: "gallery:#{gallery_id}"
+
+  defp broadcast_presence(socket) do
+    Phoenix.PubSub.broadcast(
+      SuchGalleryElixir.PubSub,
+      pubsub_topic(socket.assigns.gallery_id),
+      {:presence_update, presence_list(socket)}
+    )
+  end
+
+  defp presence_list(socket) do
+    socket
+    |> Presence.list()
+    |> Enum.flat_map(fn {key, %{metas: metas}} ->
+      Enum.map(metas, fn meta ->
+        %{
+          "id" => to_string(key),
+          "name" => meta[:name] || meta["name"] || "Guest",
+          "color" => meta[:color] || meta["color"] || "#ff5500",
+          "x" => meta[:x] || meta["x"] || 0.0,
+          "z" => meta[:z] || meta["z"] || 0.0
+        }
+      end)
+    end)
+  end
 end

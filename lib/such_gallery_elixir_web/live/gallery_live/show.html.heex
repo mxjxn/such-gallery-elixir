@@ -1,11 +1,14 @@
-<div
-  id="gallery-room"
-  class="mx-auto max-w-6xl"
-  phx-hook="GalleryRoom"
-  data-gallery-id={@gallery.id}
-  data-guest-name={@guest_name}
-  data-guest-color={@guest_color}
->
+<div id="gallery-room" class="mx-auto max-w-6xl">
+  <div
+    id="gallery-presence-bridge"
+    phx-hook="GalleryRoom"
+    data-gallery-id={@gallery.id}
+    data-guest-name={@guest_name}
+    data-guest-color={@guest_color}
+    class="hidden"
+    aria-hidden="true"
+  >
+  </div>
   <header class="mb-8 border-b border-zinc-200 pb-6">
     <p class="text-sm font-medium uppercase tracking-wide text-zinc-500">Magazine view</p>
     <h1 class="mt-1 text-3xl font-bold text-zinc-900">{@gallery.name}</h1>
@@ -44,9 +47,9 @@
             <li class="flex items-center gap-2 text-sm">
               <span
                 class="inline-block h-3 w-3 rounded-full"
-                style={"background-color: #{visitor["color"] || visitor[:color]}"}
+                style={"background-color: #{Map.get(visitor, "color", "#ff5500")}"}
               />
-              <span class="font-medium">{visitor["name"] || visitor[:name]}</span>
+              <span class="font-medium">{Map.get(visitor, "name", "Guest")}</span>
             </li>
           <% end %>
         </ul>
@@ -66,21 +69,24 @@
             </div>
           <% end %>
         </div>
-        <.form for={%{}} as={:chat} phx-submit="send_chat" class="flex gap-2">
+        <form id="chat-form" phx-submit="send_chat" phx-reset class="flex gap-2">
           <input
+            id="chat-input"
             type="text"
             name="text"
             placeholder="Say something…"
             autocomplete="off"
+            enterkeyhint="send"
             class="flex-1 rounded border border-zinc-300 px-3 py-2 text-sm"
           />
           <button
             type="submit"
+            aria-label="Send message"
             class="rounded bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
           >
             Send
           </button>
-        </.form>
+        </form>
       </section>
     </aside>
   </div>
