@@ -1,0 +1,87 @@
+<div
+  id="gallery-room"
+  class="mx-auto max-w-6xl"
+  phx-hook="GalleryRoom"
+  data-gallery-id={@gallery.id}
+  data-guest-name={@guest_name}
+  data-guest-color={@guest_color}
+>
+  <header class="mb-8 border-b border-zinc-200 pb-6">
+    <p class="text-sm font-medium uppercase tracking-wide text-zinc-500">Magazine view</p>
+    <h1 class="mt-1 text-3xl font-bold text-zinc-900">{@gallery.name}</h1>
+    <p class="mt-2 text-zinc-600">
+      {to_string(@gallery.template.layout)} layout · {@gallery.template.slot_count} frames ·
+      {length(@presences)} here now
+    </p>
+  </header>
+
+  <div class="grid gap-8 lg:grid-cols-[1fr_280px]">
+    <section>
+      <h2 class="mb-4 text-lg font-semibold text-zinc-800">Artwork</h2>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <%= for placement <- @placements do %>
+          <article class="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+            <img
+              src={placement.artwork_url}
+              alt={placement.title || "Artwork"}
+              class="aspect-[2/3] w-full object-cover"
+            />
+            <div class="p-3">
+              <p class="font-medium text-zinc-900">{placement.title || "Untitled"}</p>
+              <p :if={placement.artist} class="text-sm text-zinc-500">{placement.artist}</p>
+            </div>
+          </article>
+        <% end %>
+      </div>
+      <p :if={@placements == []} class="text-zinc-500">No artwork placed yet.</p>
+    </section>
+
+    <aside class="space-y-6">
+      <section class="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-600">Visitors</h2>
+        <ul class="space-y-2">
+          <%= for visitor <- @presences do %>
+            <li class="flex items-center gap-2 text-sm">
+              <span
+                class="inline-block h-3 w-3 rounded-full"
+                style={"background-color: #{visitor["color"] || visitor[:color]}"}
+              />
+              <span class="font-medium">{visitor["name"] || visitor[:name]}</span>
+            </li>
+          <% end %>
+        </ul>
+        <p :if={@presences == []} class="text-sm text-zinc-500">Connecting…</p>
+      </section>
+
+      <section class="rounded-lg border border-zinc-200 bg-white p-4">
+        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-600">Chat</h2>
+        <div
+          id="chat-messages"
+          class="mb-4 max-h-64 space-y-2 overflow-y-auto text-sm"
+        >
+          <%= for msg <- @chat_messages do %>
+            <div class="rounded bg-zinc-50 px-2 py-1">
+              <span class="font-medium text-zinc-800">{msg.name}</span>
+              <span class="text-zinc-600">: {msg.text}</span>
+            </div>
+          <% end %>
+        </div>
+        <.form for={%{}} as={:chat} phx-submit="send_chat" class="flex gap-2">
+          <input
+            type="text"
+            name="text"
+            placeholder="Say something…"
+            autocomplete="off"
+            class="flex-1 rounded border border-zinc-300 px-3 py-2 text-sm"
+          />
+          <button
+            type="submit"
+            class="rounded bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+          >
+            Send
+          </button>
+        </.form>
+      </section>
+    </aside>
+  </div>
+</div>
