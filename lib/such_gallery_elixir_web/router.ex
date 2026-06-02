@@ -18,6 +18,7 @@ defmodule SuchGalleryElixirWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    get "/gallery/:slug/walk", PageController, :walk
     live "/gallery/:slug", GalleryLive.Show, :show
   end
 

@@ -10,8 +10,18 @@
   >
   </div>
   <header class="mb-8 border-b border-zinc-200 pb-6">
-    <p class="text-sm font-medium uppercase tracking-wide text-zinc-500">Magazine view</p>
-    <h1 class="mt-1 text-3xl font-bold text-zinc-900">{@gallery.name}</h1>
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p class="text-sm font-medium uppercase tracking-wide text-zinc-500">Magazine view</p>
+        <h1 class="mt-1 text-3xl font-bold text-zinc-900">{@gallery.name}</h1>
+      </div>
+      <a
+        href={~p"/gallery/#{@gallery.slug}/walk"}
+        class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+      >
+        Walk gallery →
+      </a>
+    </div>
     <p class="mt-2 text-zinc-600">
       {to_string(@gallery.template.layout)} layout · {@gallery.template.slot_count} frames ·
       {length(@presences)} here now

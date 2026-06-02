@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{@page_title} · Walk · Such Gallery</title>
+    <link rel="stylesheet" href={~p"/assets/app.css"} />
+    <script defer type="text/javascript" src={~p"/assets/gallery_walk.js"}>
+    </script>
+  </head>
+  <body class="m-0 overflow-hidden bg-zinc-950">
+    <div
+      id="gallery-walk-root"
+      class="relative h-screen w-screen"
+      data-gallery-id={@gallery.id}
+      data-guest-name={@guest_name}
+      data-guest-color={@guest_color}
+    >
+      <canvas id="gallery-walk-canvas" class="block h-full w-full"></canvas>
+      <div
+        id="gallery-walk-hint"
+        class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40 text-center text-white"
+      >
+        <p class="text-lg font-medium">Click to enter · WASD to move · Esc to unlock</p>
+        <p class="text-sm text-zinc-300">
+          Square room · up to 8 frames per wall
+        </p>
+      </div>
+      <div class="absolute left-4 top-4 z-10 flex flex-col gap-2 text-sm text-white">
+        <a
+          href={~p"/gallery/#{@gallery.slug}"}
+          class="rounded bg-black/50 px-3 py-1.5 hover:bg-black/70"
+        >
+          ← Magazine view
+        </a>
+        <span class="rounded bg-black/50 px-3 py-1.5">{@gallery.name}</span>
+      </div>
+    </div>
+  </body>
+</html>
