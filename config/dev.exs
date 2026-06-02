@@ -15,6 +15,7 @@ config :such_gallery_elixir, SuchGalleryElixirWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "L/FcxbM5ZECq2GM2mZeX6vTpIzO78yBNwTQC8Ox65ExEgd9CKBKZILBN8p+iXg4u",
   watchers: [
+    esbuild: {Esbuild, :install_and_run, [:such_gallery_elixir, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:such_gallery_elixir, ~w(--watch)]}
   ]
 
