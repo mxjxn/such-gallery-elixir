@@ -7,8 +7,9 @@
 - [x] Presence module (avatar positions, names)
 - [x] Chat (broadcast messages to room)
 - [x] Magazine LiveView at `/gallery/:slug` (presence + chat via JS hook)
-- [ ] Three.js: basic room (floor, walls, artwork planes) — Phase 1c
-- [ ] WASD movement + position broadcast — Phase 1c
+- [x] Three.js: square room (floor, 4 walls, artwork planes) — Phase 1c
+- [x] WASD movement + position broadcast — Phase 1c (`/gallery/:slug/walk`)
+- [x] `square_32` template: 8 frames per wall (32 total)
 - [ ] Mobile polish for 2D grid — optional
 
 ### Phase 2: Gallery System (June 11-20)

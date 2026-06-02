@@ -170,13 +170,11 @@ Then `mix ecto.create` (PostgreSQL must be running).
 - Renders room container, connects to Presence, displays chat
 - Hook into RoomChannel via `{:ok, _topic, _socket}` from JS client
 
-### Step 7: Three.js Client (deferred — Phase 1c)
-- Set up Vite in `assets/` or a separate `client/` directory
-- Basic room geometry (floor plane, walls)
-- WASD movement, pointer lock
-- Connect to Phoenix socket, join room topic
-- Position broadcast loop (~10Hz)
-- Render other avatars as colored spheres with name labels
+### Step 7: Three.js Client (Phase 1c — in progress)
+- `assets/js/gallery_walk.js` (esbuild + npm `three`), route `GET /gallery/:slug/walk`
+- Square room: floor + 4 walls; placements from `gallery_state` (resolved x/y/z)
+- `square_32` template: 8 slots on each wall (`back`, `right`, `front`, `left`)
+- WASD + pointer lock; `move` ~10 Hz; avatars as spheres + name sprites
 
 ## Do NOT
 
