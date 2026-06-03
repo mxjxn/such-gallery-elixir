@@ -2,11 +2,111 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{@page_title} · Walk · Such Gallery</title>
     <link rel="stylesheet" href={~p"/assets/app.css"} />
     <script defer type="text/javascript" src={~p"/assets/gallery_walk.js"}>
     </script>
+    <style>
+      /* Mobile artwork tray — bottom thumbnail bar */
+      .artwork-tray {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        padding: 10px 12px;
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+        background: rgba(0, 0, 0, 0.72);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        z-index: 20;
+        pointer-events: auto;
+        scrollbar-width: none;
+      }
+      .artwork-tray::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* Individual thumbnail button */
+      .artwork-tray-item {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        padding: 4px;
+        background: rgba(255, 255, 255, 0.06);
+        cursor: pointer;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .artwork-tray-item:active {
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      /* Active artwork highlight */
+      .artwork-tray-item-active {
+        border-color: #f97316;
+        box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.45);
+      }
+
+      .artwork-tray-item img {
+        width: 56px;
+        height: 56px;
+        object-fit: cover;
+        border-radius: 6px;
+        display: block;
+      }
+
+      .artwork-tray-label {
+        font-size: 10px;
+        color: #d4d4d8;
+        max-width: 72px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: center;
+        line-height: 1.2;
+        padding: 0 2px;
+      }
+
+      /* Navigation arrows */
+      .nav-arrow {
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 20;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 50%;
+        color: white;
+        font-size: 22px;
+        cursor: pointer;
+        pointer-events: auto;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.15s;
+        user-select: none;
+      }
+      .nav-arrow:active {
+        background: rgba(0, 0, 0, 0.75);
+      }
+      .nav-arrow-left {
+        left: 12px;
+      }
+      .nav-arrow-right {
+        right: 12px;
+      }
+    </style>
   </head>
   <body class="m-0 overflow-hidden bg-zinc-950">
     <div
@@ -17,6 +117,8 @@
       data-guest-color={@guest_color}
     >
       <canvas id="gallery-walk-canvas" class="block h-full w-full"></canvas>
+
+      <!-- Desktop pointer-lock hint -->
       <div
         id="gallery-walk-hint"
         class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40 text-center text-white"
@@ -26,6 +128,8 @@
           Square room · up to 8 frames per wall
         </p>
       </div>
+
+      <!-- Back button + gallery name -->
       <div class="absolute left-4 top-4 z-10 flex flex-col gap-2 text-sm text-white">
         <a
           href={~p"/gallery/#{@gallery.slug}"}
@@ -35,6 +139,28 @@
         </a>
         <span class="rounded bg-black/50 px-3 py-1.5">{@gallery.name}</span>
       </div>
+
+      <!-- Mobile: left navigation arrow -->
+      <button
+        id="nav-prev"
+        type="button"
+        class="nav-arrow nav-arrow-left md:hidden"
+        aria-label="Previous artwork"
+      >‹</button>
+
+      <!-- Mobile: right navigation arrow -->
+      <button
+        id="nav-next"
+        type="button"
+        class="nav-arrow nav-arrow-right md:hidden"
+        aria-label="Next artwork"
+      >›</button>
+
+      <!-- Mobile: artwork thumbnail tray -->
+      <div
+        id="artwork-tray"
+        class="artwork-tray md:hidden"
+      ></div>
     </div>
   </body>
 </html>

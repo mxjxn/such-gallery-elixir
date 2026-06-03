@@ -6,6 +6,8 @@ const BROADCAST_MS = 100
 const FRAME_W = 1.4
 const FRAME_H = 2.0
 const EYE_HEIGHT = 1.6
+const NAVIGATE_DURATION = 800
+const VIEW_DISTANCE = 2.5
 
 function initGalleryWalk(root) {
   const galleryId = root.dataset.galleryId
@@ -14,6 +16,11 @@ function initGalleryWalk(root) {
 
   const canvas = root.querySelector("#gallery-walk-canvas")
   const hint = root.querySelector("#gallery-walk-hint")
+  const tray = root.querySelector("#artwork-tray")
+  const navPrev = root.querySelector("#nav-prev")
+  const navNext = root.querySelector("#nav-next")
+
+  const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(0x1a1a1a)
@@ -47,6 +54,30 @@ function initGalleryWalk(root) {
   let yaw = 0
   let pointerLocked = false
 
+  // ── Mobile tap-tour state ──
+  let currentArtworkIndex = -1
+  let placements = []
+  let isNavigating = false
+  let navQueue = null
+  let navAnimStart = 0
+  let navAnimDuration = NAVIGATE_DURATION
+  let navFromPos = new THREE.Vector3()
+  let navFromLookAt = new THREE.Vector3()
+  let navToPos = new THREE.Vector3()
+  let navToLookAt = new THREE.Vector3()
+  let currentLookAt = new THREE.Vector3(0, EYE_HEIGHT, 0)
+
+  // ── Desktop: hide mobile overlays ──
+  if (!isMobile && tray) tray.classList.add("hidden")
+  if (!isMobile && navPrev) navPrev.classList.add("hidden")
+  if (!isMobile && navNext) navNext.classList.add("hidden")
+
+  // ── Mobile: hide pointer-lock hint immediately ──
+  if (isMobile && hint) hint.classList.add("hidden")
+
+  // ── Mobile: skip pointer lock ──
+  const shouldRequestPointerLock = () => !isMobile
+
   const socket = new Socket("/socket", {})
   socket.connect()
 
@@ -64,11 +95,157 @@ function initGalleryWalk(root) {
     galleryState = state
     roomSize = Math.max(state.width || 12, state.depth || 12)
     buildRoom(scene, state)
-    placeArtworks(scene, state.placements || [])
+    placements = state.placements || []
+    placeArtworks(scene, placements)
+
+    if (isMobile) {
+      populateTray(placements)
+      if (currentArtworkIndex < 0 && placements.length > 0) {
+        navigateToArtwork(0)
+      }
+    }
   })
 
   channel.on("presence_state", () => syncAvatars())
   channel.on("presence_diff", () => syncAvatars())
+
+  // ── Mobile: compute camera position 2.5m in front of artwork ──
+  function computeViewPosition(placement) {
+    const artworkPos = new THREE.Vector3(placement.x, placement.y, placement.z)
+    const rotationY = placement.rotation_y || 0
+
+    // Artwork faces along its local +Z (forward from wall)
+    // Camera should be in front, offset along -localZ direction
+    const forward = new THREE.Vector3(0, 0, -1)
+    forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY)
+
+    const cameraPos = artworkPos.clone().add(forward.multiplyScalar(VIEW_DISTANCE))
+    cameraPos.y = EYE_HEIGHT
+
+    // lookAt = artwork center (eye height)
+    const lookAt = new THREE.Vector3(placement.x, EYE_HEIGHT, placement.z)
+
+    return {cameraPos, lookAt}
+  }
+
+  // ── Mobile: smooth camera navigation with ease-in-out cubic ──
+  function smoothNavigateTo(targetPos, targetLookAt, duration) {
+    duration = duration || NAVIGATE_DURATION
+
+    if (isNavigating) {
+      // Queue one navigation
+      navQueue = {targetPos: targetPos.clone(), targetLookAt: targetLookAt.clone(), duration}
+      return
+    }
+
+    isNavigating = true
+    navAnimStart = performance.now()
+    navAnimDuration = duration
+    navFromPos.copy(camera.position)
+    navFromLookAt.copy(currentLookAt)
+    navToPos.copy(targetPos)
+    navToLookAt.copy(targetLookAt)
+  }
+
+  // Ease-in-out cubic
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+  }
+
+  // ── Mobile: populate thumbnail tray ──
+  function populateTray(pls) {
+    if (!tray) return
+    tray.innerHTML = ""
+
+    for (let i = 0; i < pls.length; i++) {
+      const p = pls[i]
+      const item = document.createElement("button")
+      item.type = "button"
+      item.className = "artwork-tray-item"
+      item.dataset.index = i
+      item.dataset.x = p.x
+      item.dataset.y = p.y
+      item.dataset.z = p.z
+      item.dataset.rotationY = p.rotation_y || 0
+      item.dataset.title = p.title || ""
+
+      const img = document.createElement("img")
+      img.src = p.artwork_url
+      img.alt = p.title || "Artwork"
+      img.loading = "lazy"
+      item.appendChild(img)
+
+      const label = document.createElement("span")
+      label.className = "artwork-tray-label"
+      label.textContent = p.title || ""
+      item.appendChild(label)
+
+      item.addEventListener("click", () => navigateToArtwork(i))
+      tray.appendChild(item)
+    }
+
+    updateTrayActive()
+  }
+
+  // ── Mobile: update active state on tray thumbnail ──
+  function updateTrayActive() {
+    if (!tray) return
+    const items = tray.querySelectorAll(".artwork-tray-item")
+    items.forEach((item, i) => {
+      if (i === currentArtworkIndex) {
+        item.classList.add("artwork-tray-item-active")
+        item.scrollIntoView({behavior: "smooth", inline: "center", block: "nearest"})
+      } else {
+        item.classList.remove("artwork-tray-item-active")
+      }
+    })
+  }
+
+  // ── Mobile: navigate to artwork by index ──
+  function navigateToArtwork(index) {
+    if (index < 0 || index >= placements.length) return
+    currentArtworkIndex = index
+    const p = placements[index]
+    const {cameraPos, lookAt} = computeViewPosition(p)
+    smoothNavigateTo(cameraPos, lookAt)
+    updateTrayActive()
+    broadcastPosition()
+  }
+
+  // ── Mobile: nav arrow handlers ──
+  if (navPrev) {
+    navPrev.addEventListener("click", () => {
+      if (currentArtworkIndex > 0) navigateToArtwork(currentArtworkIndex - 1)
+    })
+  }
+
+  if (navNext) {
+    navNext.addEventListener("click", () => {
+      if (currentArtworkIndex < placements.length - 1) navigateToArtwork(currentArtworkIndex + 1)
+    })
+  }
+
+  // ── Mobile: swipe gesture on canvas ──
+  if (isMobile) {
+    let touchStartX = 0
+    canvas.addEventListener("touchstart", e => {
+      touchStartX = e.touches[0].clientX
+    }, {passive: true})
+
+    canvas.addEventListener("touchend", e => {
+      const dx = e.changedTouches[0].clientX - touchStartX
+      const absDx = Math.abs(dx)
+      if (absDx < 60) return // too short, ignore
+
+      if (dx < 0 && currentArtworkIndex < placements.length - 1) {
+        // swipe left → next
+        navigateToArtwork(currentArtworkIndex + 1)
+      } else if (dx > 0 && currentArtworkIndex > 0) {
+        // swipe right → prev
+        navigateToArtwork(currentArtworkIndex - 1)
+      }
+    }, {passive: true})
+  }
 
   function buildRoom(scene, state) {
     clearGroup(scene, "room")
@@ -231,27 +408,33 @@ function initGalleryWalk(root) {
 
   window.addEventListener("resize", onResize)
 
-  window.addEventListener("keydown", e => {
-    keys[e.code] = true
-  })
-  window.addEventListener("keyup", e => {
-    keys[e.code] = false
-  })
+  // Desktop: keyboard controls
+  if (!isMobile) {
+    window.addEventListener("keydown", e => {
+      keys[e.code] = true
+    })
+    window.addEventListener("keyup", e => {
+      keys[e.code] = false
+    })
+  }
 
-  canvas.addEventListener("click", () => {
-    if (!pointerLocked) canvas.requestPointerLock()
-  })
+  // Desktop: pointer lock
+  if (shouldRequestPointerLock()) {
+    canvas.addEventListener("click", () => {
+      if (!pointerLocked) canvas.requestPointerLock()
+    })
 
-  document.addEventListener("pointerlockchange", () => {
-    pointerLocked = document.pointerLockElement === canvas
-    if (hint) hint.classList.toggle("hidden", pointerLocked)
-  })
+    document.addEventListener("pointerlockchange", () => {
+      pointerLocked = document.pointerLockElement === canvas
+      if (hint) hint.classList.toggle("hidden", pointerLocked)
+    })
 
-  document.addEventListener("mousemove", e => {
-    if (!pointerLocked) return
-    yaw -= e.movementX * 0.002
-    camera.rotation.y = yaw
-  })
+    document.addEventListener("mousemove", e => {
+      if (!pointerLocked) return
+      yaw -= e.movementX * 0.002
+      camera.rotation.y = yaw
+    })
+  }
 
   const clock = new THREE.Clock()
 
@@ -259,7 +442,37 @@ function initGalleryWalk(root) {
     requestAnimationFrame(tick)
     const dt = clock.getDelta()
 
-    if (pointerLocked) {
+    // ── Mobile: update navigation animation ──
+    if (isNavigating) {
+      const elapsed = performance.now() - navAnimStart
+      let t = Math.min(elapsed / navAnimDuration, 1)
+      t = easeInOutCubic(t)
+
+      camera.position.lerpVectors(navFromPos, navToPos, t)
+      currentLookAt.lerpVectors(navFromLookAt, navToLookAt, t)
+      camera.lookAt(currentLookAt)
+      camera.position.y = EYE_HEIGHT
+
+      broadcastPosition()
+
+      if (elapsed >= navAnimDuration) {
+        isNavigating = false
+        camera.position.copy(navToPos)
+        currentLookAt.copy(navToLookAt)
+        camera.lookAt(currentLookAt)
+        camera.position.y = EYE_HEIGHT
+
+        // Process queued navigation
+        if (navQueue) {
+          const queued = navQueue
+          navQueue = null
+          smoothNavigateTo(queued.targetPos, queued.targetLookAt, queued.duration)
+        }
+      }
+    }
+
+    // ── Desktop: WASD movement with pointer lock ──
+    if (!isMobile && pointerLocked) {
       const forward = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation)
       const right = new THREE.Vector3(1, 0, 0).applyEuler(camera.rotation)
       const move = new THREE.Vector3()
