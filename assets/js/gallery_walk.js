@@ -7,7 +7,7 @@ const FRAME_W = 1.4
 const FRAME_H = 2.0
 const EYE_HEIGHT = 1.6
 const NAVIGATE_DURATION = 800
-const VIEW_DISTANCE = 2.5
+const VIEW_DISTANCE = 3.5
 
 function initGalleryWalk(root) {
   const galleryId = root.dataset.galleryId
@@ -114,12 +114,11 @@ function initGalleryWalk(root) {
     const artworkPos = new THREE.Vector3(placement.x, placement.y, placement.z)
     const rotationY = placement.rotation_y || 0
 
-    // Artwork faces along its local +Z (forward from wall)
-    // Camera should be in front, offset along -localZ direction
-    const forward = new THREE.Vector3(0, 0, -1)
-    forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY)
+    // Artwork normal points along its local +Z (into the room from wall)
+    const normal = new THREE.Vector3(0, 0, 1)
+    normal.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY)
 
-    const cameraPos = artworkPos.clone().add(forward.multiplyScalar(VIEW_DISTANCE))
+    const cameraPos = artworkPos.clone().add(normal.multiplyScalar(VIEW_DISTANCE))
     cameraPos.y = EYE_HEIGHT
 
     // lookAt = artwork center (eye height)
