@@ -44,6 +44,20 @@ defmodule SuchGalleryElixir.GalleriesFixtures do
     Repo.preload(template, :layout_slots)
   end
 
+  def add_slots(template_id, start_index, end_index) do
+    for index <- start_index..(end_index - 1) do
+      %SuchGalleryElixir.Galleries.LayoutSlot{}
+      |> SuchGalleryElixir.Galleries.LayoutSlot.changeset(%{
+        template_id: template_id,
+        slot_index: index,
+        wall: :back,
+        u: (index + 1) / (end_index + 1),
+        v: 0.5
+      })
+      |> SuchGalleryElixir.Repo.insert!()
+    end
+  end
+
   def gallery_fixture(attrs \\ %{}) do
     template =
       case Map.get(attrs, :template) do

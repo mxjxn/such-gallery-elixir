@@ -62,6 +62,28 @@ Each gallery is one walkable space and one Phoenix Channel topic (`room:{gallery
 
 Both are legitimate first-class experiences. Magazine is for quick browsing, gallery is for events and沉浸.
 
+## Artwork Resolver
+
+Three source types for artwork inputs:
+- `:url` — plain image URL. Resolve via OG meta tags (title, description, image).
+- `:nft_ref` — `"chain:contract:tokenId"`. Resolve via on-chain `tokenURI` (eth_call on public RPC), then fetch metadata JSON. IPFS URIs resolved to `https://ipfs.io/ipfs/{cid}`. Fallback: Alchemy API.
+- `:auction_listing` — `"chain:contract:tokenId"` but with auction house listing context baked into `listing_meta` JSONB. When loaded in browser, listing info (current bid, end time, seller, status) is already known — no separate lookup or comparison against auction contract needed.
+
+**No marketplace URL parsing** (OpenSea, Zora, etc.) — only direct NFT refs and auction listing refs.
+
+**Key design rule:** NFT refs are NOT just chain:contract:tokenId. The source_type determines behavior. An auction listing frame must immediately have listing data ready without additional lookups.
+
+**RPC:** Via `NFT_RPC_URL` env var (keys not yet configured). Read-only eth_call for tokenURI only.
+
+**Dedup:** `external_id` field stores the source_ref string. Artwork records are shared across galleries — if the same token is already in the DB, reuse it.
+
+**Metadata status:** `:pending` → `:resolved` → `:failed`. Resolve async via `Task.start_link` after placement. On-chain tokenURI first, Alchemy API fallback.
+
+**JSONB `listing_meta` field:** Different shapes per source_type:
+- Auction listing: current bid, end time, seller address, status
+- Direct NFT: null (standard metadata only)
+- Plain URL: null (OG tags only)
+
 ## Database Schema
 
 ```
