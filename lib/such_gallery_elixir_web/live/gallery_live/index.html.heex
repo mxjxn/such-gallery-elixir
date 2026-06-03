@@ -1,0 +1,59 @@
+<div class="mx-auto max-w-6xl">
+  <div class="flex items-center justify-between border-b border-zinc-200 pb-8 pt-4">
+    <div>
+      <h1 class="text-3xl font-bold text-zinc-900">wow such gallery</h1>
+      <p class="mt-1 text-zinc-600">curate galleries, host events, sell art</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-zinc-500">
+        coming summer 2026
+      </span>
+      <a
+        href={~p"/galleries/new"}
+        class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+      >
+        Create gallery
+      </a>
+    </div>
+  </div>
+
+  <div :if={@galleries == []} class="py-16 text-center">
+    <p class="text-zinc-500">No galleries yet. Create one to get started.</p>
+  </div>
+
+  <div :if={@galleries != []} class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <%= for gallery <- @galleries do %>
+      <article class="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
+        <div class="border-b border-zinc-100 bg-zinc-50 p-4">
+          <h2 class="text-lg font-semibold text-zinc-900">{gallery.name}</h2>
+          <p class="mt-1 text-sm text-zinc-500">
+            {to_string(gallery.template.layout)} layout · {gallery.template.slot_count} frames
+          </p>
+          <p :if={gallery.description} class="mt-2 line-clamp-2 text-sm text-zinc-600">
+            {gallery.description}
+          </p>
+        </div>
+        <div class="flex divide-x divide-zinc-200">
+          <a
+            href={~p"/gallery/#{gallery.slug}"}
+            class="flex-1 px-4 py-2.5 text-center text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Magazine
+          </a>
+          <a
+            href={~p"/gallery/#{gallery.slug}/walk"}
+            class="flex-1 px-4 py-2.5 text-center text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Walk
+          </a>
+          <a
+            href={~p"/galleries/#{gallery.slug}/edit"}
+            class="flex-1 px-4 py-2.5 text-center text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Edit
+          </a>
+        </div>
+      </article>
+    <% end %>
+  </div>
+</div>

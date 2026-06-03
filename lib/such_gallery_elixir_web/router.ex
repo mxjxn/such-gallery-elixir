@@ -17,9 +17,11 @@ defmodule SuchGalleryElixirWeb.Router do
   scope "/", SuchGalleryElixirWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", GalleryLive.Index, :index
     get "/gallery/:slug/walk", PageController, :walk
     live "/gallery/:slug", GalleryLive.Show, :show
+    live "/galleries/new", GalleryLive.Form, :new
+    live "/galleries/:slug/edit", GalleryLive.Form, :edit
   end
 
   # Other scopes may use custom stacks.

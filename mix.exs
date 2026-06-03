@@ -54,6 +54,7 @@ defmodule SuchGalleryElixir.MixProject do
       {:jason, "~> 1.2"},
       {:ecto_sql, "~> 3.10"},
       {:postgrex, ">= 0.0.0"},
+      {:phoenix_ecto, "~> 4.4"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"}
     ]

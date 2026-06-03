@@ -3,11 +3,6 @@ defmodule SuchGalleryElixirWeb.PageControllerTest do
 
   alias SuchGalleryElixir.GalleriesFixtures
 
-  test "GET /", %{conn: conn} do
-    conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Peace of mind from prototype to production"
-  end
-
   test "GET /gallery/:slug/walk", %{conn: conn} do
     gallery = GalleriesFixtures.gallery_fixture()
 

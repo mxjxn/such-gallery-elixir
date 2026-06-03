@@ -41,7 +41,9 @@ defmodule SuchGalleryElixir.Galleries.Gallery do
       :depth_override,
       :owner_id
     ])
-    |> validate_required([:name, :slug, :wall_color, :frame_style, :template_id])
+    |> validate_required([:name, :wall_color, :frame_style, :template_id])
+    |> maybe_generate_slug()
+    |> validate_required([:slug])
     |> validate_length(:name, max: 200)
     |> validate_length(:slug, max: 100)
     |> validate_format(:slug, ~r/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
@@ -50,6 +52,23 @@ defmodule SuchGalleryElixir.Galleries.Gallery do
     |> unique_constraint(:slug)
     |> foreign_key_constraint(:template_id)
     |> foreign_key_constraint(:owner_id)
+  end
+
+  defp maybe_generate_slug(changeset) do
+    slug = get_field(changeset, :slug)
+
+    if slug && String.trim(slug) != "" do
+      changeset
+    else
+      name = get_change(changeset, :name)
+
+      if name do
+        slug = SuchGalleryElixir.Galleries.slugify_name(name)
+        put_change(changeset, :slug, slug)
+      else
+        changeset
+      end
+    end
   end
 
   @doc "Effective width for 3D placement (override or template default). Requires preloaded `:template`."

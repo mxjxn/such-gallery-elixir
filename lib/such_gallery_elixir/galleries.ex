@@ -127,6 +127,49 @@ defmodule SuchGalleryElixir.Galleries do
     |> Repo.one()
   end
 
+  @doc "Lists all gallery templates."
+  def list_templates do
+    GalleryTemplate
+    |> order_by([t], t.slug)
+    |> preload(:layout_slots)
+    |> Repo.all()
+  end
+
+  @doc """
+  Lists all galleries with template preloaded.
+  """
+  def list_galleries do
+    Gallery
+    |> order_by([g], desc: g.inserted_at)
+    |> preload(:template)
+    |> Repo.all()
+  end
+
+  @doc """
+  Updates a gallery with the given attributes.
+  """
+  def update_gallery(%Gallery{} = gallery, attrs) when is_map(attrs) do
+    gallery
+    |> Gallery.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Converts a name to a URL-friendly slug.
+
+  - Downcases, replaces non-alphanumeric runs with hyphens, trims.
+  - Capped at 100 characters.
+  """
+  def slugify_name(name) when is_binary(name) do
+    name
+    |> String.downcase()
+    |> String.replace(~r/[^a-z0-9]+/, "-")
+    |> String.trim("-")
+    |> String.slice(0, 100)
+  end
+
+  def slugify_name(_), do: ""
+
   @doc "Creates a gallery from a template slug."
   def create_gallery(attrs, template_slug) when is_map(attrs) do
     case get_template_by_slug(template_slug) do
@@ -134,7 +177,7 @@ defmodule SuchGalleryElixir.Galleries do
         {:error, :template_not_found}
 
       template ->
-        attrs = Map.put(attrs, :template_id, template.id)
+        attrs = Map.put(attrs, "template_id", template.id)
 
         %Gallery{}
         |> Gallery.changeset(attrs)
