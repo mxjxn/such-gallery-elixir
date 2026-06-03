@@ -1,4 +1,4 @@
-# Square-room demo gallery (32 slots, 8 per wall). Requires square_32 template.
+# Square-room demo gallery (4 artworks, 1 per wall). Requires square_32 template.
 
 alias SuchGalleryElixir.Galleries
 alias SuchGalleryElixir.Repo
@@ -24,23 +24,27 @@ defmodule SuchGalleryElixir.Seeds.Square do
         %{
           name: "Square Room",
           slug: "square",
-          description: "Square gallery with 8 frames on each wall"
+          description: "Square gallery with 1 frame per wall (4 total)"
         },
         template.slug
       )
 
     gallery = Repo.preload(gallery, template: :layout_slots)
 
-    for {slot, index} <- Enum.with_index(gallery.template.layout_slots) do
+    # Pick the first slot on each wall (slot_index 0, 8, 16, 24)
+    gallery.template.layout_slots
+    |> Enum.filter(fn slot -> rem(slot.slot_index, 8) == 0 end)
+    |> Enum.with_index()
+    |> Enum.each(fn {slot, index} ->
       {:ok, artwork} =
         Galleries.create_artwork(%{
           artwork_url: "https://picsum.photos/seed/square#{index}/400/600",
-          title: "Wall #{slot.wall} · #{slot.slot_index + 1}",
+          title: "Wall #{slot.wall} · #{index + 1}",
           artist: "Demo Artist"
         })
 
       Galleries.assign_artwork_to_slot(gallery, artwork, slot, index)
-    end
+    end)
 
     :ok
   end

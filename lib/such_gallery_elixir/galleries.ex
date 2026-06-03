@@ -177,6 +177,12 @@ defmodule SuchGalleryElixir.Galleries do
         {:error, :template_not_found}
 
       template ->
+        # Normalize to string keys to avoid mixed-key CastError when merging
+        attrs = if is_map(attrs) and not is_struct(attrs) do
+          for {k, v} <- attrs, into: %{}, do: {to_string(k), v}
+        else
+          attrs
+        end
         attrs = Map.put(attrs, "template_id", template.id)
 
         %Gallery{}
