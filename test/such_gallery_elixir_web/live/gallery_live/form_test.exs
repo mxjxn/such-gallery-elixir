@@ -99,5 +99,48 @@ defmodule SuchGalleryElixirWeb.GalleryLive.FormTest do
     test "redirects when gallery not found", %{conn: conn} do
       assert {:error, {:live_redirect, %{to: "/"}}} = live(conn, ~p"/galleries/nonexistent/edit")
     end
+
+    test "shows delete button", %{conn: conn} do
+      gallery = GalleriesFixtures.gallery_fixture()
+
+      {:ok, _view, html} = live(conn, ~p"/galleries/#{gallery.slug}/edit")
+
+      assert html =~ "Delete gallery"
+    end
+
+    test "shows confirmation on delete click", %{conn: conn} do
+      gallery = GalleriesFixtures.gallery_fixture()
+
+      {:ok, view, html} = live(conn, ~p"/galleries/#{gallery.slug}/edit")
+
+      refute html =~ "Yes, delete gallery"
+
+      html = render_click(view, :show_delete_confirm)
+
+      assert html =~ "Yes, delete gallery"
+      assert html =~ "All placements and chat messages will be removed"
+    end
+
+    test "cancels delete confirmation", %{conn: conn} do
+      gallery = GalleriesFixtures.gallery_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/galleries/#{gallery.slug}/edit")
+
+      render_click(view, :show_delete_confirm)
+      html = render_click(view, :cancel_delete)
+
+      refute html =~ "Yes, delete gallery"
+    end
+
+    test "deletes gallery and redirects to index", %{conn: conn} do
+      gallery = GalleriesFixtures.gallery_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/galleries/#{gallery.slug}/edit")
+
+      render_click(view, :show_delete_confirm)
+      assert {:error, {:live_redirect, %{to: "/"}}} = render_click(view, :delete)
+
+      refute Galleries.get_gallery_by_slug(gallery.slug)
+    end
   end
 end

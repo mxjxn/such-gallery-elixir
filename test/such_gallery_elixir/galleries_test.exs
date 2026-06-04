@@ -1,6 +1,8 @@
 defmodule SuchGalleryElixir.GalleriesTest do
   use SuchGalleryElixir.DataCase, async: true
 
+  import Ecto.Query
+
   alias SuchGalleryElixir.Galleries
   alias SuchGalleryElixir.GalleriesFixtures
 
@@ -75,6 +77,48 @@ defmodule SuchGalleryElixir.GalleriesTest do
 
     test "returns empty for non-binary input" do
       assert Galleries.slugify_name(nil) == ""
+    end
+  end
+
+  describe "delete_gallery/1" do
+    test "deletes a gallery" do
+      gallery = GalleriesFixtures.gallery_fixture()
+
+      {:ok, _} = Galleries.delete_gallery(gallery)
+
+      refute Galleries.get_gallery_by_slug(gallery.slug)
+    end
+
+    test "cascades artwork placements" do
+      gallery = GalleriesFixtures.gallery_fixture()
+
+      artwork =
+        GalleriesFixtures.artwork_fixture(%{artwork_url: "https://example.com/test.png"})
+
+      slot = GalleriesFixtures.slot_fixture(gallery)
+      {:ok, _} = Galleries.assign_artwork_to_slot(gallery, artwork, slot, 1)
+
+      {:ok, _} = Galleries.delete_gallery(gallery)
+
+      refute Galleries.get_gallery_by_slug(gallery.slug)
+      # Artwork record should still exist (shared across galleries)
+      assert SuchGalleryElixir.Repo.get(SuchGalleryElixir.Galleries.Artwork, artwork.id)
+    end
+
+    test "cascades chat messages" do
+      gallery = GalleriesFixtures.gallery_fixture()
+
+      {:ok, _} =
+        Galleries.create_chat_message(gallery.id, "Guest", "Hello world")
+
+      {:ok, _} = Galleries.delete_gallery(gallery)
+
+      messages =
+        SuchGalleryElixir.Repo.all(
+          from(m in SuchGalleryElixir.Galleries.ChatMessage, where: m.gallery_id == ^gallery.id)
+        )
+
+      assert messages == []
     end
   end
 end

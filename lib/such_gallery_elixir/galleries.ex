@@ -193,6 +193,16 @@ defmodule SuchGalleryElixir.Galleries do
     end
   end
 
+  @doc """
+  Deletes a gallery and all its placements and chat messages.
+
+  Artwork records are not deleted — they may be shared across galleries.
+  The cascade is handled by `on_delete: :delete_all` foreign keys.
+  """
+  def delete_gallery(%Gallery{} = gallery) do
+    Repo.delete(gallery)
+  end
+
   @doc "Creates an artwork record."
   def create_artwork(attrs) when is_map(attrs) do
     %Artwork{}

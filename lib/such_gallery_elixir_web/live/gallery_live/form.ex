@@ -19,14 +19,14 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Form do
           template_slug = params["template"] || "square_32"
           gallery = %Gallery{}
           changeset = Gallery.changeset(gallery, %{})
-          assign(socket, gallery: nil, changeset: changeset, template_slug: template_slug)
+          assign(socket, gallery: nil, changeset: changeset, template_slug: template_slug, show_delete_confirm: false)
 
         :edit ->
           gallery = Galleries.get_gallery_by_slug(params["slug"])
 
           if gallery do
             changeset = Gallery.changeset(gallery, %{})
-            assign(socket, gallery: gallery, changeset: changeset)
+            assign(socket, gallery: gallery, changeset: changeset, show_delete_confirm: false)
           else
             socket
             |> put_flash(:error, "Gallery not found")
@@ -94,6 +94,35 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Form do
             changeset = Map.put(changeset, :action, :validate)
             {:noreply, assign(socket, :changeset, changeset)}
         end
+    end
+  end
+
+  @impl true
+  def handle_event("show_delete_confirm", _params, socket) do
+    {:noreply, assign(socket, :show_delete_confirm, true)}
+  end
+
+  @impl true
+  def handle_event("cancel_delete", _params, socket) do
+    {:noreply, assign(socket, :show_delete_confirm, false)}
+  end
+
+  @impl true
+  def handle_event("delete", _params, socket) do
+    gallery = socket.assigns.gallery
+
+    case Galleries.delete_gallery(gallery) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Gallery deleted.")
+         |> push_navigate(to: ~p"/")}
+
+      {:error, _} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Could not delete gallery.")
+         |> assign(:show_delete_confirm, false)}
     end
   end
 
