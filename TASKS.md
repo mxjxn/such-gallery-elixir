@@ -103,12 +103,38 @@ Phase 2 scope = **auto-fill slots from a list** (same as 2b), not free-form drag
 
 ---
 
-### Phase 3: Polish + Events (June 21-30)
-- [ ] Custom or procedural 3D room models
-- [ ] Auth (SIWE wallet connect)
-- [ ] Gallery minting contract (simple ERC-721 → gallery ID)
-- [ ] AWS deployment (ECS Fargate + RDS, or t3 instance)
-- [ ] One curated live event — invite, test, iterate
+### Phase 3: Auth + Events (June 22-30)
+
+#### 3a. SIWE Auth — IN PROGRESS
+Dependencies: `siwe` (spruceid/siwe-ex), `ex_abi` (hex encoding helpers)
+
+- [x] Install Rust via asdf (siwe-ex uses Rustler NIF)
+- [ ] `Siwe` lib module: wrapper around `siwe` hex package
+  - `generate_nonce/0` → `Siwe.generate_nonce()`
+  - `parse_message/1` → `Siwe.parse(message_string)`
+  - `verify/2` → `Siwe.parse_if_valid(message, signature)` → returns `{:ok, %Siwe{}}` or `{:error, reason}`
+  - Verify domain matches `such.gallery`, chain_id allowed, not expired
+- [ ] `Accounts` context:
+  - `get_or_create_user/1` — find by wallet_address, or create with defaults
+  - `verify_siwe_session/2` — parse + verify + return user, fail on mismatch
+- [ ] JSON API endpoints:
+  - `POST /api/siwe/nonce` — generate nonce, store in session, return JSON `{nonce}`
+  - `POST /api/siwe/verify` — accept `{message, signature}`, verify, set `user_id` in session, return `{address, display_name}`
+  - `DELETE /api/siwe/session` — clear session, log out
+- [ ] `RequireAuth` plug: reads `user_id` from session, assigns `current_user`, redirects or 401
+- [ ] Router: protect `/galleries/new` and `/galleries/:slug/edit` behind auth
+- [ ] Frontend JS: wallet connect button, `personal_sign` flow, nonce request, verify call
+- [ ] Tests: SIWE message parse, signature verify (use known test vectors), auth flow integration
+
+#### 3b. Minting contract — TODO
+- [ ] Simple ERC-721 (non-upgradeable)
+- [ ] Mint = gallery ID claim
+- [ ] Deploy script
+
+#### 3c. Live event — TODO
+- [ ] Invite list
+- [ ] Test SIWE flow end-to-end
+- [ ] Iterate
 
 ### Not Doing (Post-June)
 - Multiple floor plan types beyond initial set

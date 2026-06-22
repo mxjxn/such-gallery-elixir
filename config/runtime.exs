@@ -36,6 +36,8 @@ if config_env() == :prod do
   host = System.get_env("PHX_HOST") || "example.com"
   port = String.to_integer(System.get_env("PORT") || "4000")
 
+  config :such_gallery_elixir, :siwe_domain, host
+
   config :such_gallery_elixir, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   database_url =

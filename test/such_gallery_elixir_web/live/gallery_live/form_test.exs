@@ -5,11 +5,14 @@ defmodule SuchGalleryElixirWeb.GalleryLive.FormTest do
 
   alias SuchGalleryElixir.Galleries
   alias SuchGalleryElixir.GalleriesFixtures
+  alias SuchGalleryElixir.AccountsFixtures
 
   setup do
     # Ensure a template exists for the form's default template_slug
     GalleriesFixtures.template_fixture(%{slug: "square_32"})
-    :ok
+    user = AccountsFixtures.user_fixture()
+    conn = AccountsFixtures.authed_conn(build_conn(), user)
+    {:ok, conn: conn, user: user}
   end
 
   describe "new gallery" do
