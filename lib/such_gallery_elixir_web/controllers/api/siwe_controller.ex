@@ -17,7 +17,9 @@ defmodule SuchGalleryElixirWeb.Api.SiweController do
   Body: %{"message" => siwe_string, "signature" => hex_signature}
   """
   def verify(conn, %{"message" => message, "signature" => signature}) do
-    case Accounts.verify_siwe(message, signature) do
+    stored_nonce = get_session(conn, :siwe_nonce)
+
+    case Accounts.verify_siwe(message, signature, stored_nonce) do
       {:ok, user} ->
         conn
         |> put_session(:user_id, user.id)
@@ -27,6 +29,11 @@ defmodule SuchGalleryElixirWeb.Api.SiweController do
           display_name: user.display_name,
           avatar_color: user.avatar_color
         })
+
+      {:error, {:nonce_mismatch}} ->
+        conn
+        |> put_status(:unauthorized)
+        |> json(%{error: "Nonce mismatch — request a fresh challenge"})
 
       {:error, reason} ->
         conn

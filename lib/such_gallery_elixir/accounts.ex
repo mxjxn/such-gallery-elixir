@@ -42,20 +42,25 @@ defmodule SuchGalleryElixir.Accounts do
   end
 
   @doc """
-  Verifies a SIWE message + signature, returns the user.
+  Verifies a SIWE message + signature against an expected nonce.
 
-  Uses Siwe.parse_if_valid/2 which checks signature validity,
-  time constraints (not_before, expiration_time) in one call.
-  Then verifies domain matches our configured host.
+  The nonce is stored server-side during the challenge phase and must
+  match the nonce embedded in the SIWE message — prevents replay attacks
+  where a valid signature is reused with a different message.
+  Also checks domain matches our configured host and verifies signature
+  validity and time constraints via Siwe.parse_if_valid/2.
   """
-  def verify_siwe(message, signature) do
+  def verify_siwe(message, signature, expected_nonce) do
     with {:ok, parsed} <- Siwe.parse_if_valid(message, signature) do
-      expected = siwe_domain()
+      cond do
+        parsed.nonce != expected_nonce ->
+          {:error, {:nonce_mismatch}}
 
-      if parsed.domain == expected do
-        get_or_create_user(parsed.address)
-      else
-        {:error, {:domain_mismatch, parsed.domain, expected}}
+        parsed.domain != siwe_domain() ->
+          {:error, {:domain_mismatch, parsed.domain, siwe_domain()}}
+
+        true ->
+          get_or_create_user(parsed.address)
       end
     end
   end

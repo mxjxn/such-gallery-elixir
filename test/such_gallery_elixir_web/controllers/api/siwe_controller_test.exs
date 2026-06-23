@@ -64,5 +64,19 @@ defmodule SuchGalleryElixirWeb.Api.SiweControllerTest do
       response = json_response(conn, 401)
       assert response["error"] =~ "Verification failed"
     end
+
+    test "rejects requests without nonce in session" do
+      # No nonce stored — should fail verification regardless
+      conn =
+        build_conn()
+        |> Phoenix.ConnTest.init_test_session(%{siwe_nonce: nil})
+        |> post(~p"/api/siwe/verify", %{
+          "message" => "such.gallery wants you to sign in",
+          "signature" => "0xbadsig"
+        })
+
+      assert %{"error" => error} = json_response(conn, 401)
+      assert error =~ "Verification failed"
+    end
   end
 end
