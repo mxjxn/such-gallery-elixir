@@ -150,7 +150,79 @@ async function logout() {
   clearState()
 }
 
-// Export as global for easy use in templates
+// --- Wallet button UI (self-initializing) ---
+
+function renderLoggedIn(btn, user) {
+  const addr = user.address || user.wallet_address || ""
+  const short = addr.slice(0, 6) + "\u2026" + addr.slice(-4)
+  btn.innerHTML =
+    '<div class="flex items-center gap-2">' +
+    '<span class="w-2 h-2 rounded-full bg-green-500"></span>' +
+    '<span class="text-sm text-gray-700">' + short + "</span>" +
+    '<button id="wallet-logout-btn" class="text-xs text-gray-400 hover:text-red-500 transition-colors">\u2715</button>' +
+    "</div>"
+  document.getElementById("wallet-logout-btn").addEventListener("click", handleLogout)
+}
+
+function renderLoggedOut(btn) {
+  if (walletAvailable()) {
+    btn.innerHTML =
+      '<button id="wallet-connect-btn" class="px-3 py-1.5 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-700 transition-colors cursor-pointer">Connect Wallet</button>'
+    document.getElementById("wallet-connect-btn").addEventListener("click", handleSignIn)
+  } else {
+    btn.innerHTML =
+      '<a href="https://metamask.io/download/" target="_blank" class="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:border-gray-500 transition-colors">Install MetaMask</a>'
+  }
+}
+
+async function handleSignIn() {
+  const btn = document.getElementById("wallet-btn-inner")
+  if (!btn) return
+  btn.innerHTML = '<span class="text-sm text-gray-400">Connecting\u2026</span>'
+  try {
+    const user = await signIn()
+    renderLoggedIn(btn, user)
+  } catch (err) {
+    console.error("SuchGallery: sign-in failed", err)
+    renderLoggedOut(btn)
+  }
+}
+
+async function handleLogout() {
+  await logout()
+  const btn = document.getElementById("wallet-btn-inner")
+  if (btn) renderLoggedOut(btn)
+}
+
+// Auto-init on DOM ready (deferred scripts run before DOMContentLoaded)
+function initWalletButton() {
+  const btn = document.getElementById("wallet-btn-inner")
+  if (!btn) return
+
+  const existing = getState()
+  if (existing) {
+    renderLoggedIn(btn, existing)
+    return
+  }
+
+  checkSession().then((user) => {
+    if (user) {
+      renderLoggedIn(btn, user)
+    } else {
+      renderLoggedOut(btn)
+    }
+  }).catch(() => {
+    renderLoggedOut(btn)
+  })
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initWalletButton)
+} else {
+  initWalletButton()
+}
+
+// Export as global
 window.SuchGallery = {
   signIn,
   logout,
