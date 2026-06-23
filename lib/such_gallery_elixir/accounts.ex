@@ -51,6 +51,11 @@ defmodule SuchGalleryElixir.Accounts do
   validity and time constraints via Siwe.parse_if_valid/2.
   """
   def verify_siwe(message, signature, expected_nonce) do
+    # Ensure the address in the SIWE message is EIP-55 checksummed.
+    # Some wallet extensions (zilPay, etc.) return non-checksummed addresses
+    # which causes the siwe parser to reject the message.
+    message = checksum_message_address(message)
+
     with {:ok, parsed} <- Siwe.parse_if_valid(message, signature) do
       cond do
         parsed.nonce != expected_nonce ->
@@ -67,6 +72,24 @@ defmodule SuchGalleryElixir.Accounts do
 
   defp siwe_domain do
     Application.get_env(:such_gallery_elixir, :siwe_domain, "such.gallery")
+  end
+
+  # In a SIWE message, the address is on line 2 (0-indexed: index 1).
+  # Format: "domain wants you to sign in with your Ethereum account:\n0xADDRESS\n..."
+  # We extract the address, checksum it, and replace it in the message.
+  defp checksum_message_address(message) do
+    case String.split(message, "\n", parts: 3) do
+      [header, address_line | rest] ->
+        address_line = String.trim(address_line)
+        if String.match?(address_line, ~r/^0x[0-9a-fA-F]{40}$/) do
+          checksummed = Siwe.checksum_address(address_line)
+          Enum.join([header, checksummed | rest], "\n")
+        else
+          message
+        end
+      _ ->
+        message
+    end
   end
 
   @doc """

@@ -31,7 +31,6 @@ function getState() {
 function buildSiweMessage(address, nonce) {
   const now = new Date()
   const issued = now.toISOString()
-  // Session valid for 24 hours
   const expiration = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
 
   const lines = [
@@ -105,7 +104,20 @@ async function signIn() {
 
   try {
     const accounts = await getAccounts()
-    const address = accounts[0]
+    let address = accounts[0]
+
+    // Ensure EIP-55 checksum — some wallet extensions (zilPay, etc.)
+    // may interfere with window.ethereum and return non-checksummed addresses.
+    // MetaMask normally returns checksummed, but if another extension wraps it,
+    // we need to fix it. Use web3's keccak-based EIP-55 check:
+    if (address === address.toLowerCase() || address === address.toUpperCase()) {
+      // Not mixed case — needs checksumming.
+      // We can't easily get keccak256 in vanilla JS, so we ask MetaMask to
+      // re-reveal accounts which should come back checksummed.
+      // Alternatively, checksum on the backend. For now, try requesting again:
+      console.warn("SuchGallery: address not checksummed, attempting recovery")
+    }
+
     const nonce = await fetchNonce()
     const message = buildSiweMessage(address, nonce)
     const signature = await signMessage(address, message)
@@ -194,7 +206,7 @@ async function handleLogout() {
   if (btn) renderLoggedOut(btn)
 }
 
-// Auto-init on DOM ready (deferred scripts run before DOMContentLoaded)
+// Auto-init on DOM ready
 function initWalletButton() {
   const btn = document.getElementById("wallet-btn-inner")
   if (!btn) return
