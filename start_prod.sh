@@ -14,6 +14,7 @@ export ALCHEMY_API_KEY=$(grep ALCHEMY_API_KEY /root/such-gallery-elixir/.env | c
 export ALCHEMY_NETWORKS=$(grep ALCHEMY_NETWORKS /root/such-gallery-elixir/.env | cut -d= -f2-)
 export GRAPH_API_KEY=$(grep GRAPH_API_KEY /root/such-gallery-elixir/.env | cut -d= -f2-)
 export GRAPH_SUBGRAPH_DEPLOYMENT=$(grep GRAPH_SUBGRAPH_DEPLOYMENT /root/such-gallery-elixir/.env | cut -d= -f2-)
+export DEV_MODE=true
 
 # Add Rust to PATH for siwe NIF
 export PATH="/root/.asdf/installs/rust/1.96.0/bin:$HOME/.asdf/shims:$HOME/.asdf/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"

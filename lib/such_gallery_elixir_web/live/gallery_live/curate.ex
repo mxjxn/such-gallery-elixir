@@ -19,8 +19,10 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
 
   @impl true
   def mount(_params, _session, socket) do
+    dev_mode = Application.get_env(:such_gallery_elixir, :dev_mode, false)
     {:ok,
      socket
+     |> assign(:dev_mode, dev_mode)
      |> assign(:gallery, nil)
      |> assign(:slug, nil)
      |> assign(:active_slot, nil)
@@ -28,6 +30,7 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
      |> assign(:paste_input, "")
      |> assign(:resolve_result, nil)
      |> assign(:resolve_error, nil)
+     |> assign(:resolve_raw_error, nil)
      |> assign(:wallet_address, "")
      |> assign(:wallet_chain, "8453")
      |> assign(:wallet_nfts, [])
@@ -37,7 +40,8 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
      |> assign(:lookup_contract, "")
      |> assign(:lookup_chain, "8453")
      |> assign(:lookup_token_id, "")
-     |> assign(:slots, [])}
+     |> assign(:slots, [])
+     |> assign(:debug_log, [])}
   end
 
   @impl true
@@ -103,18 +107,25 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
         {:noreply, assign(socket, resolve_error: "Enter a URL or NFT reference")}
 
       true ->
-        case Lookup.resolve(input) do
+        {elapsed, result} = :timer.tc(fn -> Lookup.resolve(input) end)
+        debug = debug_entry("resolve", input, result, elapsed)
+
+        case result do
           {:ok, data} ->
             {:noreply,
              socket
              |> assign(:resolve_result, data_to_map(data))
-             |> assign(:resolve_error, nil)}
+             |> assign(:resolve_error, nil)
+             |> assign(:resolve_raw_error, nil)
+             |> append_debug(debug)}
 
           {:error, reason} ->
             {:noreply,
              socket
-             |> assign(:resolve_error, error_message(reason))
-             |> assign(:resolve_result, nil)}
+             |> assign(:resolve_error, error_message(reason, socket))
+             |> assign(:resolve_raw_error, if(socket.assigns.dev_mode, do: inspect(reason), else: nil))
+             |> assign(:resolve_result, nil)
+             |> append_debug(debug)}
         end
     end
   end
@@ -134,7 +145,11 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
         {:noreply, assign(socket, resolve_error: "Invalid wallet address")}
 
       true ->
-        case Lookup.browse_wallet(address, chain_id, nil) do
+        socket = assign(socket, :wallet_loading, true)
+        {elapsed, result} = :timer.tc(fn -> Lookup.browse_wallet(address, chain_id, nil) end)
+        debug = debug_entry("browse_wallet", "#{address} chain=#{chain_id}", result, elapsed)
+
+        case result do
           {:ok, data} ->
             nfts =
               Enum.map(data.nfts, fn nft ->
@@ -150,13 +165,17 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
              |> assign(:wallet_total, data.total)
              |> assign(:wallet_loading, false)
              |> assign(:wallet_address, address)
-             |> assign(:wallet_chain, chain)}
+             |> assign(:wallet_chain, chain)
+             |> assign(:resolve_raw_error, nil)
+             |> append_debug(debug)}
 
           {:error, reason} ->
             {:noreply,
              socket
              |> assign(:wallet_loading, false)
-             |> assign(:resolve_error, error_message(reason))}
+             |> assign(:resolve_error, error_message(reason, socket))
+             |> assign(:resolve_raw_error, if(socket.assigns.dev_mode, do: inspect(reason), else: nil))
+             |> append_debug(debug)}
         end
     end
   end
@@ -167,7 +186,10 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
     chain_id = String.to_integer(socket.assigns.wallet_chain)
     page_key = socket.assigns.wallet_page_key
 
-    case Lookup.browse_wallet(address, chain_id, page_key) do
+    {elapsed, result} = :timer.tc(fn -> Lookup.browse_wallet(address, chain_id, page_key) end)
+    debug = debug_entry("browse_more", "page_key=#{page_key}", result, elapsed)
+
+    case result do
       {:ok, data} ->
         new_nfts =
           Enum.map(data.nfts, fn nft ->
@@ -175,14 +197,21 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
             |> data_to_map()
             |> Map.put("source_ref", "nft:#{nft.chain_id}:#{nft.contract}:#{nft.token_id}")
           end)
+
         {:noreply,
          socket
          |> assign(:wallet_nfts, socket.assigns.wallet_nfts ++ new_nfts)
          |> assign(:wallet_page_key, data.page_key)
-         |> assign(:wallet_loading, false)}
+         |> assign(:wallet_loading, false)
+         |> append_debug(debug)}
 
-      {:error, _} ->
-        {:noreply, assign(socket, :wallet_loading, false)}
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> assign(:wallet_loading, false)
+         |> assign(:resolve_error, error_message(reason, socket))
+         |> assign(:resolve_raw_error, if(socket.assigns.dev_mode, do: inspect(reason), else: nil))
+         |> append_debug(debug)}
     end
   end
 
@@ -199,18 +228,25 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
         {:noreply, assign(socket, resolve_error: "Contract and token ID required")}
 
       true ->
-        case Lookup.direct_lookup(contract, chain, token_id) do
+        {elapsed, result} = :timer.tc(fn -> Lookup.direct_lookup(contract, chain, token_id) end)
+        debug = debug_entry("direct_lookup", "#{contract}:#{chain}:#{token_id}", result, elapsed)
+
+        case result do
           {:ok, data} ->
             {:noreply,
              socket
              |> assign(:resolve_result, data_to_map(data))
-             |> assign(:resolve_error, nil)}
+             |> assign(:resolve_error, nil)
+             |> assign(:resolve_raw_error, nil)
+             |> append_debug(debug)}
 
           {:error, reason} ->
             {:noreply,
              socket
-             |> assign(:resolve_error, error_message(reason))
-             |> assign(:resolve_result, nil)}
+             |> assign(:resolve_error, error_message(reason, socket))
+             |> assign(:resolve_raw_error, if(socket.assigns.dev_mode, do: inspect(reason), else: nil))
+             |> assign(:resolve_result, nil)
+             |> append_debug(debug)}
         end
     end
   end
@@ -349,15 +385,26 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
     String.match?(addr, ~r/^0x[a-fA-F0-9]{40}$/)
   end
 
-  defp error_message(:listing_not_found), do: "Listing not found on cryptoart.social"
-  defp error_message(:invalid_input), do: "Invalid input format"
-  defp error_message(:not_a_cryptoart_url), do: "Not a recognized cryptoart.social URL"
-  defp error_message(:invalid_address), do: "Invalid Ethereum address"
-  defp error_message(:invalid_params), do: "Invalid parameters"
-  defp error_message({:http_error, code}), do: "API request failed (HTTP #{code})"
-  defp error_message({:graphql_errors, _}), do: "Subgraph query failed"
-  defp error_message({:alchemy_error, err}), do: "Alchemy API error: #{inspect(err)}"
-  defp error_message(reason), do: inspect(reason)
+  defp error_message(:listing_not_found, _socket), do: "Listing not found on cryptoart.social"
+  defp error_message(:invalid_input, _socket), do: "Invalid input format"
+  defp error_message(:not_a_cryptoart_url, _socket), do: "Not a recognized cryptoart.social URL"
+  defp error_message(:invalid_address, _socket), do: "Invalid Ethereum address"
+  defp error_message(:invalid_params, _socket), do: "Invalid parameters"
+  defp error_message(:invalid_nft_ref, _socket), do: "Invalid NFT reference format"
+  defp error_message(:invalid_auction_format, _socket), do: "Invalid auction listing format"
+  defp error_message({:http_error, code}, _socket), do: "API request failed (HTTP #{code})"
+  defp error_message({:graphql_errors, errors}, socket) when socket.assigns.dev_mode do
+    "Subgraph error: #{inspect(errors)}"
+  end
+  defp error_message({:graphql_errors, _}, _socket), do: "Subgraph query failed"
+  defp error_message({:alchemy_error, err}, socket) when socket.assigns.dev_mode do
+    "Alchemy error: #{inspect(err)}"
+  end
+  defp error_message({:alchemy_error, _}, _socket), do: "Could not fetch NFT data"
+  defp error_message(reason, socket) when socket.assigns.dev_mode do
+    inspect(reason)
+  end
+  defp error_message(_reason, _socket), do: "Something went wrong"
 
   defp data_to_map(data) when is_map(data) do
     # Convert atom keys to string keys for JS interop in HEEx templates
@@ -446,6 +493,30 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
     </button>
     """
   end
+
+  # ── Debug helpers (dev mode) ────────────────────────────────
+
+  defp append_debug(socket, entry) do
+    if socket.assigns.dev_mode do
+      log = Enum.take([entry | socket.assigns.debug_log], 20)
+      assign(socket, :debug_log, log)
+    else
+      assign(socket, :debug_log, [])
+    end
+  end
+
+  defp debug_entry(action, input, result, elapsed_us) do
+    %{
+      time: DateTime.utc_now() |> DateTime.to_iso8601(),
+      action: action,
+      input: String.slice(input, 0, 200),
+      result: result_label(result),
+      elapsed_ms: Float.round(elapsed_us / 1000, 1)
+    }
+  end
+
+  defp result_label({:ok, _}), do: "ok"
+  defp result_label({:error, reason}), do: "error: #{inspect(reason)}"
 
   # ── Authorization ─────────────────────────────────────────────
 

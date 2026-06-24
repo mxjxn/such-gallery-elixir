@@ -4,6 +4,13 @@
 %>
 
 <div class="min-h-screen bg-zinc-950 text-zinc-100">
+  <!-- Dev Mode Banner -->
+  <%= if @dev_mode do %>
+    <div class="bg-yellow-900/60 px-6 py-1.5 text-center text-xs font-medium text-yellow-300">
+      ⚙ DEV MODE — debug info visible
+    </div>
+  <% end %>
+
   <!-- Header -->
   <header class="border-b border-zinc-800 bg-zinc-900 px-6 py-4">
     <div class="mx-auto flex max-w-6xl items-center justify-between">
@@ -111,7 +118,12 @@
             <% end %>
 
             <%= if @resolve_error && @active_tab == "paste" do %>
-              <p class="mt-3 text-sm text-red-400"><%= @resolve_error %></p>
+              <div class="mt-3 rounded-lg border border-red-900/50 bg-red-950/40 p-3">
+                <p class="text-sm text-red-400"><%= @resolve_error %></p>
+                <%= if @dev_mode && @resolve_raw_error do %>
+                  <pre class="mt-2 overflow-x-auto text-xs text-yellow-300/80"><%= @resolve_raw_error %></pre>
+                <% end %>
+              </div>
             <% end %>
           <% end %>
 
@@ -135,6 +147,15 @@
 
             <%= if @wallet_total > 0 do %>
               <p class="text-xs text-zinc-500"><%= @wallet_total %> NFTs found</p>
+            <% end %>
+
+            <%= if @resolve_error && @active_tab == "browse" do %>
+              <div class="mt-3 rounded-lg border border-red-900/50 bg-red-950/40 p-3">
+                <p class="text-sm text-red-400"><%= @resolve_error %></p>
+                <%= if @dev_mode && @resolve_raw_error do %>
+                  <pre class="mt-2 overflow-x-auto text-xs text-yellow-300/80"><%= @resolve_raw_error %></pre>
+                <% end %>
+              </div>
             <% end %>
 
             <%= if length(@wallet_nfts) > 0 do %>
@@ -213,7 +234,12 @@
             <% end %>
 
             <%= if @resolve_error && @active_tab == "lookup" do %>
-              <p class="mt-3 text-sm text-red-400"><%= @resolve_error %></p>
+              <div class="mt-3 rounded-lg border border-red-900/50 bg-red-950/40 p-3">
+                <p class="text-sm text-red-400"><%= @resolve_error %></p>
+                <%= if @dev_mode && @resolve_raw_error do %>
+                  <pre class="mt-2 overflow-x-auto text-xs text-yellow-300/80"><%= @resolve_raw_error %></pre>
+                <% end %>
+              </div>
             <% end %>
           <% end %>
 
@@ -232,3 +258,38 @@
     </div>
   <% end %>
 </div>
+
+<!-- Dev Mode: Debug Log -->
+<%= if @dev_mode && length(@debug_log) > 0 do %>
+  <div class="mx-auto max-w-6xl px-6 pb-8">
+    <details class="rounded-lg border border-yellow-900/50 bg-yellow-950/20">
+      <summary class="cursor-pointer px-4 py-2 text-xs font-medium text-yellow-400 hover:text-yellow-300">
+        Debug Log (<%= length(@debug_log) %> entries)
+      </summary>
+      <div class="max-h-96 overflow-y-auto">
+        <table class="w-full text-xs">
+          <thead class="sticky top-0 bg-yellow-950/40 text-left text-yellow-500">
+            <tr>
+              <th class="px-4 py-1.5">Time</th>
+              <th class="px-4 py-1.5">Action</th>
+              <th class="px-4 py-1.5">Input</th>
+              <th class="px-4 py-1.5">Result</th>
+              <th class="px-4 py-1.5">Elapsed</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-yellow-900/20">
+            <%= for entry <- @debug_log do %>
+              <tr class="text-yellow-300/70">
+                <td class="whitespace-nowrap px-4 py-1.5 font-mono"><%= entry.time %></td>
+                <td class="whitespace-nowrap px-4 py-1.5"><%= entry.action %></td>
+                <td class="max-w-xs truncate px-4 py-1.5 font-mono" title={entry.input}><%= entry.input %></td>
+                <td class="max-w-xs truncate px-4 py-1.5 font-mono" title={entry.result}><%= entry.result %></td>
+                <td class="whitespace-nowrap px-4 py-1.5"><%= entry.elapsed_ms %>ms</td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+<% end %>

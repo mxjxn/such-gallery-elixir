@@ -72,6 +72,7 @@ if config_env() == :prod do
   config :such_gallery_elixir, :graph_api_key, System.get_env("GRAPH_API_KEY")
   config :such_gallery_elixir, :graph_subgraph_deployment,
     System.get_env("GRAPH_SUBGRAPH_DEPLOYMENT")
+  config :such_gallery_elixir, :dev_mode, System.get_env("DEV_MODE", "true") == "true"
 
   # ## SSL Support
   #
