@@ -64,6 +64,20 @@ async function fetchNonce() {
   return data.nonce
 }
 
+// Checksum an address via server (EIP-55)
+// Some wallet extensions (zilPay etc.) return non-checksummed addresses
+// which breaks the siwe parser. We let the server (keccak256 via NIF) do it.
+async function checksumAddress(address) {
+  const res = await fetch("/api/siwe/checksum", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ address }),
+  })
+  if (!res.ok) return address
+  const data = await res.json()
+  return data.address
+}
+
 // Get connected accounts from wallet
 async function getAccounts() {
   const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
@@ -106,17 +120,9 @@ async function signIn() {
     const accounts = await getAccounts()
     let address = accounts[0]
 
-    // Ensure EIP-55 checksum — some wallet extensions (zilPay, etc.)
-    // may interfere with window.ethereum and return non-checksummed addresses.
-    // MetaMask normally returns checksummed, but if another extension wraps it,
-    // we need to fix it. Use web3's keccak-based EIP-55 check:
-    if (address === address.toLowerCase() || address === address.toUpperCase()) {
-      // Not mixed case — needs checksumming.
-      // We can't easily get keccak256 in vanilla JS, so we ask MetaMask to
-      // re-reveal accounts which should come back checksummed.
-      // Alternatively, checksum on the backend. For now, try requesting again:
-      console.warn("SuchGallery: address not checksummed, attempting recovery")
-    }
+    // Ensure EIP-55 checksum before building SIWE message
+    // (some extensions like zilPay return non-checksummed addresses)
+    address = await checksumAddress(address)
 
     const nonce = await fetchNonce()
     const message = buildSiweMessage(address, nonce)

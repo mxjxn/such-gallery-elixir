@@ -84,4 +84,15 @@ defmodule SuchGalleryElixirWeb.Api.SiweController do
         end
     end
   end
+
+  @doc """
+  POST /api/siwe/checksum — returns EIP-55 checksummed address.
+  Body: %{"address" => "0x..."}
+  Some wallet extensions return non-checksummed addresses which breaks
+  SIWE message parsing. Frontend calls this before building the message.
+  """
+  def checksum(conn, %{"address" => address}) do
+    checksummed = Siwe.checksum_address(address)
+    json(conn, %{address: checksummed})
+  end
 end

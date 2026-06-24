@@ -38,6 +38,7 @@ defmodule SuchGalleryElixirWeb.Router do
 
     post "/nonce", SiweController, :nonce
     post "/verify", SiweController, :verify
+    post "/checksum", SiweController, :checksum
     delete "/session", SiweController, :logout
     get "/me", SiweController, :me
   end
