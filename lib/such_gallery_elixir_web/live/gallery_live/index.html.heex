@@ -1,75 +1,13 @@
-<script>
-  document.addEventListener("DOMContentLoaded", async () => {
-    const authArea = document.getElementById("auth-area")
-    if (!authArea) return
-
-    const user = await SuchGallery.checkSession()
-
-    if (user) {
-      authArea.innerHTML = `
-        <div class="flex items-center gap-3">
-          <div class="flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5">
-            <div class="h-3 w-3 rounded-full" style="background: ${user.avatar_color}"></div>
-            <span class="text-sm font-medium text-zinc-700">${user.display_name}</span>
-          </div>
-          <a href="/galleries/new" class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700">
-            Create gallery
-          </a>
-          <button onclick="handleLogout()" class="rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50">
-            Sign out
-          </button>
-        </div>
-      `
-    } else {
-      authArea.innerHTML = `
-        <div class="flex items-center gap-3">
-          <span class="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-zinc-500">
-            coming summer 2026
-          </span>
-          <button onclick="handleSignIn()" id="connect-btn" class="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700">
-            Connect wallet
-          </button>
-        </div>
-      `
-    }
-  })
-
-  async function handleSignIn() {
-    const btn = document.getElementById("connect-btn")
-    if (!btn) return
-    btn.textContent = "Connecting..."
-    btn.disabled = true
-
-    try {
-      const user = await SuchGallery.signIn()
-      if (user) window.location.reload()
-    } catch (err) {
-      btn.textContent = "Connect wallet"
-      btn.disabled = false
-      alert("Sign-in failed: " + err.message)
-    }
-  }
-
-  async function handleLogout() {
-    await SuchGallery.logout()
-    window.location.reload()
-  }
-</script>
-
 <div class="mx-auto max-w-6xl">
   <div class="flex items-center justify-between border-b border-zinc-200 pb-8 pt-4">
     <div>
       <h1 class="text-3xl font-bold text-zinc-900">wow such gallery</h1>
       <p class="mt-1 text-zinc-600">curate galleries, host events, sell art</p>
     </div>
-    <div id="auth-area" class="flex items-center gap-3">
-      <!-- Populated by JS -->
-      <div class="h-9 w-32 animate-pulse rounded-lg bg-zinc-200"></div>
-    </div>
   </div>
 
   <div :if={@galleries == []} class="py-16 text-center">
-    <p class="text-zinc-500">No galleries yet. Create one to get started.</p>
+    <p class="text-zinc-500">No galleries yet.</p>
   </div>
 
   <div :if={@galleries != []} class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -77,9 +15,6 @@
       <article class="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
         <div class="border-b border-zinc-100 bg-zinc-50 p-4">
           <h2 class="text-lg font-semibold text-zinc-900">{gallery.name}</h2>
-          <p class="mt-1 text-sm text-zinc-500">
-            {to_string(gallery.template.layout)} layout · {gallery.template.slot_count} frames
-          </p>
           <p :if={gallery.description} class="mt-2 line-clamp-2 text-sm text-zinc-600">
             {gallery.description}
           </p>
@@ -89,19 +24,13 @@
             href={~p"/gallery/#{gallery.slug}"}
             class="flex-1 px-4 py-2.5 text-center text-sm font-medium text-zinc-700 hover:bg-zinc-50"
           >
-            Magazine
+            View
           </a>
           <a
             href={~p"/gallery/#{gallery.slug}/walk"}
             class="flex-1 px-4 py-2.5 text-center text-sm font-medium text-zinc-700 hover:bg-zinc-50"
           >
             Walk
-          </a>
-          <a
-            href={~p"/galleries/#{gallery.slug}/edit"}
-            class="flex-1 px-4 py-2.5 text-center text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-          >
-            Edit
           </a>
         </div>
       </article>
