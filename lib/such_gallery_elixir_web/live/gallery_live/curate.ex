@@ -44,17 +44,25 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
   def handle_params(%{"slug" => slug}, _url, socket) do
     gallery = Galleries.get_gallery_by_slug(slug)
 
-    if gallery do
-      {:noreply,
-       socket
-       |> assign(:gallery, gallery)
-       |> assign(:slug, slug)
-       |> build_slot_grid()}
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "Gallery not found")
-       |> push_navigate(to: ~p"/")}
+    cond do
+      not gallery ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Gallery not found")
+         |> push_navigate(to: ~p"/")}
+
+      not authorized?(socket, gallery) ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Only the gallery owner can curate")
+         |> push_navigate(to: ~p"/gallery/#{slug}")}
+
+      true ->
+        {:noreply,
+         socket
+         |> assign(:gallery, gallery)
+         |> assign(:slug, slug)
+         |> build_slot_grid()}
     end
   end
 
@@ -437,5 +445,14 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Curate do
       Assign to Slot
     </button>
     """
+  end
+
+  # ── Authorization ─────────────────────────────────────────────
+
+  defp authorized?(socket, gallery) do
+    case socket.assigns[:current_user] do
+      nil -> false
+      user -> user.id == gallery.owner_id
+    end
   end
 end
