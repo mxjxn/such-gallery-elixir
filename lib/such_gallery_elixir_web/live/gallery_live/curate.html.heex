@@ -1,0 +1,234 @@
+<%
+  # Curation page — 2D grid of frame slots with assignment modal
+  # All lookups happen server-side via LiveView events.
+%>
+
+<div class="min-h-screen bg-zinc-950 text-zinc-100">
+  <!-- Header -->
+  <header class="border-b border-zinc-800 bg-zinc-900 px-6 py-4">
+    <div class="mx-auto flex max-w-6xl items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold"><%= @gallery.name %></h1>
+        <p class="text-sm text-zinc-400">Curate — assign artworks to frame slots</p>
+      </div>
+      <div class="flex gap-3">
+        <a href={~p"/gallery/#{@slug}/walk"} class="rounded-lg bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700">
+          View 3D
+        </a>
+        <a href={~p"/galleries/#{@slug}/edit"} class="rounded-lg bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-700">
+          Edit Settings
+        </a>
+        <a href={~p"/"} class="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800">
+          Back
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Slot Grid -->
+  <div class="mx-auto max-w-6xl p-6">
+    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      <%= for slot <- @slots do %>
+        <button
+          type="button"
+          class={"group relative aspect-[3/4] overflow-hidden rounded-lg border transition #{slot_border_class(slot)}"}
+          phx-click="select_slot"
+          phx-value-slot_id={slot.id}
+        >
+          <%= if slot.artwork do %>
+            <img
+              src={slot.artwork.artwork_url}
+              alt={slot.artwork.title || "Untitled"}
+              class="h-full w-full object-cover"
+              loading="lazy"
+            />
+            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+              <p class="truncate text-sm font-medium"><%= slot.artwork.title || "Untitled" %></p>
+              <p class="text-xs text-zinc-400"><%= slot_label(slot) %> · <%= slot.wall %></p>
+            </div>
+          <% else %>
+            <div class="flex h-full w-full flex-col items-center justify-center gap-2">
+              <div class="flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-zinc-600">
+                <svg class="h-6 w-6 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <span class="text-xs text-zinc-600"><%= slot_label(slot) %></span>
+              <span class="text-xs text-zinc-700"><%= slot.wall %></span>
+            </div>
+          <% end %>
+        </button>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Assignment Modal -->
+  <%= if @active_slot do %>
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" phx-click="close_slot">
+      <div class="relative mx-4 w-full max-w-2xl rounded-2xl border border-zinc-700 bg-zinc-900 shadow-2xl" phx-click-stop>
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
+          <h2 class="text-lg font-semibold"><%= slot_label_for(@slots, @active_slot) %></h2>
+          <button type="button" phx-click="close_slot" class="rounded-lg p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-zinc-800">
+          <button type="button" class={"flex-1 px-4 py-3 text-sm font-medium transition #{tab_class(@active_tab, "paste")}"}
+            phx-click="switch_tab" phx-value-tab="paste">Paste Link</button>
+          <button type="button" class={"flex-1 px-4 py-3 text-sm font-medium transition #{tab_class(@active_tab, "browse")}"}
+            phx-click="switch_tab" phx-value-tab="browse">Browse Wallet</button>
+          <button type="button" class={"flex-1 px-4 py-3 text-sm font-medium transition #{tab_class(@active_tab, "lookup")}"}
+            phx-click="switch_tab" phx-value-tab="lookup">Direct Lookup</button>
+        </div>
+
+        <div class="p-6">
+
+          <!-- Tab: Paste Link -->
+          <%= if @active_tab == "paste" do %>
+            <.form for={%{}} as={:paste} phx-submit="resolve" class="space-y-4">
+              <div>
+                <label class="mb-1 block text-sm text-zinc-400">URL or NFT reference</label>
+                <input type="text" name="input" value={@paste_input}
+                  placeholder="https://cryptoart.social/listing/123"
+                  class="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                />
+                <p class="mt-1 text-xs text-zinc-600">cryptoart.social listings, nft:chain:contract:tokenId, or image URLs</p>
+              </div>
+              <button type="submit" class="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200">
+                Resolve
+              </button>
+            </.form>
+
+            <%= if @resolve_result do %>
+              <div class="mt-4 rounded-lg border border-zinc-700 bg-zinc-800 p-4">
+                <.resolve_preview result={@resolve_result} slot_id={@active_slot} source_type={Map.get(@resolve_result, "source_type", "url")} />
+              </div>
+            <% end %>
+
+            <%= if @resolve_error && @active_tab == "paste" do %>
+              <p class="mt-3 text-sm text-red-400"><%= @resolve_error %></p>
+            <% end %>
+          <% end %>
+
+          <!-- Tab: Browse Wallet -->
+          <%= if @active_tab == "browse" do %>
+            <.form for={%{}} as={:browse} phx-submit="browse_wallet" class="space-y-4">
+              <div class="flex gap-2">
+                <input type="text" name="address" value={@wallet_address}
+                  placeholder="0x..."
+                  class="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm font-mono text-zinc-100 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                />
+                <select name="chain" class="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100">
+                  <option value="1" selected={@wallet_chain == "1"}>Ethereum</option>
+                  <option value="8453" selected={@wallet_chain == "8453"}>Base</option>
+                </select>
+                <button type="submit" class="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200">
+                  Browse
+                </button>
+              </div>
+            </.form>
+
+            <%= if @wallet_total > 0 do %>
+              <p class="text-xs text-zinc-500"><%= @wallet_total %> NFTs found</p>
+            <% end %>
+
+            <%= if length(@wallet_nfts) > 0 do %>
+              <div class="mt-3 grid max-h-80 grid-cols-3 gap-2 overflow-y-auto">
+                <%= for nft <- @wallet_nfts do %>
+                  <button type="button"
+                    class="group relative aspect-square overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800 transition hover:border-zinc-500"
+                    phx-click="assign_artwork"
+                    phx-value-slot_id={@active_slot}
+                    phx-value-source_type="nft_ref"
+                    phx-value-source_ref={nft["source_ref"]}
+                    phx-value-title={nft["title"] || ""}
+                    phx-value-image_url={nft["image_url"] || ""}
+                    phx-value-contract={nft["contract"] || ""}
+                    phx-value-token_id={nft["token_id"] || ""}
+                    phx-value-chain_id={to_string(nft["chain_id"] || "")}
+                    phx-value-collection={nft["collection"] || ""}
+                    title={nft["title"] || "Untitled"}
+                  >
+                    <img src={nft["image_url"]} alt="" class="h-full w-full object-cover" loading="lazy" />
+                    <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5">
+                      <p class="truncate text-xs"><%= nft["title"] || "Untitled" %></p>
+                    </div>
+                  </button>
+                <% end %>
+              </div>
+
+              <%= if @wallet_page_key do %>
+                <button type="button" phx-click="browse_more"
+                  class="mt-3 w-full rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800">
+                  Load more
+                </button>
+              <% end %>
+            <% else %>
+              <p class="mt-4 py-8 text-center text-sm text-zinc-600">
+                Enter a wallet address to browse NFTs
+              </p>
+            <% end %>
+          <% end %>
+
+          <!-- Tab: Direct Lookup -->
+          <%= if @active_tab == "lookup" do %>
+            <.form for={%{}} as={:lookup} phx-submit="direct_lookup" class="space-y-4">
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="mb-1 block text-xs text-zinc-400">Contract</label>
+                  <input type="text" name="contract" value={@lookup_contract}
+                    placeholder="0x..."
+                    class="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm font-mono text-zinc-100 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label class="mb-1 block text-xs text-zinc-400">Chain</label>
+                  <select name="chain" class="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100">
+                    <option value="1" selected={@lookup_chain == "1"}>Ethereum</option>
+                    <option value="8453" selected={@lookup_chain == "8453"}>Base</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-1 block text-xs text-zinc-400">Token ID</label>
+                  <input type="text" name="token_id" value={@lookup_token_id}
+                    placeholder="42"
+                    class="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+              <button type="submit" class="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-200">
+                Look Up
+              </button>
+            </.form>
+
+            <%= if @resolve_result do %>
+              <div class="mt-4 rounded-lg border border-zinc-700 bg-zinc-800 p-4">
+                <.resolve_preview result={@resolve_result} slot_id={@active_slot} source_type="nft_ref" />
+              </div>
+            <% end %>
+
+            <%= if @resolve_error && @active_tab == "lookup" do %>
+              <p class="mt-3 text-sm text-red-400"><%= @resolve_error %></p>
+            <% end %>
+          <% end %>
+
+        </div>
+
+        <!-- Clear slot -->
+        <%= if slot_has_artwork?(@slots, @active_slot) do %>
+          <div class="border-t border-zinc-800 px-6 py-3">
+            <button type="button" phx-click="clear_slot" phx-value-slot_id={@active_slot}
+              class="text-sm text-red-400 hover:text-red-300">
+              Remove artwork from this slot
+            </button>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

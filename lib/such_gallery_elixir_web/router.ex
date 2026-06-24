@@ -56,12 +56,16 @@ defmodule SuchGalleryElixirWeb.Router do
 
     live "/galleries/new", GalleryLive.Form, :new
     live "/galleries/:slug/edit", GalleryLive.Form, :edit
+    live "/galleries/:slug/curate", GalleryLive.Curate, :index
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", SuchGalleryElixirWeb do
-  #   pipe_through :api
-  # end
+  scope "/api/artwork", SuchGalleryElixirWeb.Controllers.API do
+    pipe_through :api_auth
+
+    post "/resolve", ArtworkController, :resolve
+    get "/browse", ArtworkController, :browse
+    get "/lookup", ArtworkController, :lookup
+  end
 
   # Enable LiveDashboard in development
   if Application.compile_env(:such_gallery_elixir, :dev_routes) do

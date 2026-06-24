@@ -67,6 +67,12 @@ if config_env() == :prod do
     secret_key_base: secret_key_base,
     check_origin: ["https://wow.such.gallery", "https://such.gallery"]
 
+  config :such_gallery_elixir, :alchemy_api_key, System.get_env("ALCHEMY_API_KEY")
+  config :such_gallery_elixir, :alchemy_networks, System.get_env("ALCHEMY_NETWORKS", "eth-mainnet,base")
+  config :such_gallery_elixir, :graph_api_key, System.get_env("GRAPH_API_KEY")
+  config :such_gallery_elixir, :graph_subgraph_deployment,
+    System.get_env("GRAPH_SUBGRAPH_DEPLOYMENT")
+
   # ## SSL Support
   #
   # To get SSL working, you will need to add the `https` key
