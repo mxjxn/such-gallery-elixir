@@ -1,42 +1,35 @@
-# such.gallery — MMO 3D Gallery Experience
+# such.gallery — Real-time 3D Art Galleries
 
-Real-time multiplayer 3D art galleries. Walk around, chat, view collections.
+Walk around rooms with NFT art on the walls. See other visitors. Chat. Gallery owners curate their walls.
 
 ## Stack
 
 - **Backend**: Elixir / Phoenix + PostgreSQL
 - **Real-time**: Phoenix Channels + Presence
-- **3D Client**: Three.js
-- **Mobile**: 2D grid view (same channels, same presence)
-- **Auth**: SIWE (Ethereum wallet login)
-- **Deploy**: AWS (ECS Fargate + RDS)
+- **3D**: Three.js (WASD walk, pointer lock, mobile touch nav)
+- **Auth**: SIWE (Ethereum wallet)
+- **Artwork resolution**: Alchemy API + auctionhouse subgraph
+- **Deploy**: PM2 on VPS, such.gallery
+
+## Features
+
+- **3D gallery walk** — WASD movement, artwork on walls, avatar presence
+- **2D magazine view** — quick browse with presence and chat
+- **Curation page** — assign NFTs to frame slots via paste/browse/lookup
+- **Chat** — real-time room chat with guest or wallet identity
+- **SIWE auth** — sign in with Ethereum wallet
+- **Dev mode** — debug panel with error details and timing
 
 ## Architecture
 
 ```
-Client (Three.js / 2D fallback)
+Three.js (3D walk) / LiveView (2D magazine)
   ↕ WebSocket
 Phoenix Channels (room state, presence, chat)
-  ↕ Ecto/PostgreSQL
-Galleries, Artwork, Users, Frames
+  ↕ Ecto / PostgreSQL
+Galleries → ArtworkPlacements → Artworks
   ↕ REST
-cryptoart.social API (listings, collections)
+Alchemy API (NFT metadata) / Subgraph (auction listings)
 ```
 
-Each gallery room = one Phoenix Channel topic. Presence tracks all connected avatars in real-time. Artwork metadata stored in Postgres, images loaded client-side from external URLs.
-
-## Target Scale
-
-- 300 concurrent users per room
-- Multiple simultaneous rooms
-- Phoenix handles 10K+ WebSocket connections per node — single node sufficient for launch
-
-## Features
-
-- **3D galleries**: Walkable rooms with artwork on walls, real-time avatar presence
-- **Dynamic generation**: Galleries created from art collections (own + cryptoart.social listings)
-- **Customization**: Frame styles, wall colors, room layout options
-- **Chat**: Real-time room chat
-- **Mobile fallback**: 2D grid view with presence dots and chat
-- **Gallery minting**: ERC-721 — gallery as an NFT (post-launch)
-- **Events**: Curated live openings, scheduled showings
+Each gallery = one Phoenix Channel topic. Presence tracks connected avatars in real-time.
