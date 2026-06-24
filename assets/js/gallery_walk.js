@@ -296,7 +296,7 @@ function initGalleryWalk(root) {
     for (const p of placements) {
       const scale = p.scale || 1
       const geo = new THREE.PlaneGeometry(FRAME_W * scale, FRAME_H * scale)
-      const mat = new THREE.MeshStandardMaterial({color: 0x444444, side: THREE.DoubleSide})
+      const mat = new THREE.MeshBasicMaterial({color: 0xffffff, side: THREE.DoubleSide})
 
       loader.load(
         p.artwork_url,
