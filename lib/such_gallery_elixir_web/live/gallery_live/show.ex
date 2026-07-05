@@ -25,7 +25,11 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Show do
           |> Galleries.list_placements()
           |> then(&Galleries.resolve_placement_transforms(&1, gallery))
 
-        guest_name = "Guest-#{:rand.uniform(9999)}"
+        {display_name, display_color} =
+          case socket.assigns[:current_user] do
+            %{display_name: name, avatar_color: color} -> {name, color}
+            _ -> {"Guest-#{:rand.uniform(9999)}", random_color()}
+          end
 
         chat_messages = Galleries.list_recent_chat_messages(gallery.id)
 
@@ -34,8 +38,8 @@ defmodule SuchGalleryElixirWeb.GalleryLive.Show do
           |> assign(:page_title, gallery.name)
           |> assign(:gallery, gallery)
           |> assign(:placements, placements)
-          |> assign(:guest_name, guest_name)
-          |> assign(:guest_color, random_color())
+          |> assign(:guest_name, display_name)
+          |> assign(:guest_color, display_color)
           |> assign(:chat_messages, chat_messages)
           |> assign(:presences, [])
 

@@ -18,12 +18,18 @@ defmodule SuchGalleryElixirWeb.PageController do
         |> redirect(to: ~p"/")
 
       gallery ->
+        {display_name, display_color} =
+          case conn.assigns[:current_user] do
+            %{display_name: name, avatar_color: color} -> {name, color}
+            _ -> {"Guest-#{:rand.uniform(9999)}", random_color()}
+          end
+
         render(conn, :walk,
           layout: false,
           page_title: gallery.name,
           gallery: gallery,
-          guest_name: "Guest-#{:rand.uniform(9999)}",
-          guest_color: random_color()
+          guest_name: display_name,
+          guest_color: display_color
         )
     end
   end

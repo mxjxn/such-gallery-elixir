@@ -63,31 +63,97 @@ defmodule SuchGalleryElixirWeb.RoomChannel do
     if text == "" do
       {:reply, {:ok, %{}}, socket}
     else
-      meta = presence_meta_for_socket(socket)
-
-      case Galleries.create_chat_message(socket.assigns.gallery_id, meta.name, text) do
-        {:ok, message} ->
-          broadcast!(socket, "chat:new", message)
-
-          Phoenix.PubSub.broadcast(
-            SuchGalleryElixir.PubSub,
-            pubsub_topic(socket.assigns.gallery_id),
-            {:chat, message}
-          )
-
-          {:reply, {:ok, %{}}, socket}
-
-        {:error, _} ->
-          {:reply, {:error, %{reason: "invalid_message"}}, socket}
+      # Route slash commands before persisting as chat
+      if String.starts_with?(text, "/") do
+        handle_command(text, socket)
+      else
+        handle_chat_message(text, socket)
       end
     end
   end
 
+  defp handle_chat_message(text, socket) do
+    meta = presence_meta_for_socket(socket)
+
+    case Galleries.create_chat_message(socket.assigns.gallery_id, meta.name, text) do
+      {:ok, message} ->
+        broadcast!(socket, "chat:new", message)
+
+        Phoenix.PubSub.broadcast(
+          SuchGalleryElixir.PubSub,
+          pubsub_topic(socket.assigns.gallery_id),
+          {:chat, message}
+        )
+
+        {:reply, {:ok, %{}}, socket}
+
+      {:error, _} ->
+        {:reply, {:error, %{reason: "invalid_message"}}, socket}
+    end
+  end
+
+  # ── Slash commands ─────────────────────────────────────────────
+
+  defp handle_command("/" <> rest, socket) do
+    [command | _args] = String.split(rest, ~r/\s+/, parts: 2)
+    command = String.downcase(command)
+    user = socket.assigns[:current_user]
+
+    case command do
+      "help" ->
+        help_text =
+          "Available commands:\n" <>
+            "  /help — show this message\n" <>
+            "  /bid  — place a bid on artwork (requires wallet)\n" <>
+            "  /whoami — show your display name and address"
+
+        {:reply, {:ok, %{type: "command", command: "help", text: help_text}}, socket}
+
+      "whoami" ->
+        case user do
+          nil ->
+            {:reply,
+             {:ok, %{type: "command", command: "whoami", text: "You are a guest. Connect a wallet to identify yourself."}},
+             socket}
+
+          _ ->
+            {:reply,
+             {:ok,
+              %{
+                type: "command",
+                command: "whoami",
+                text: "You are #{user.display_name} (#{user.wallet_address})"
+              }},
+             socket}
+        end
+
+      "bid" ->
+        if user do
+          {:reply,
+           {:ok,
+            %{type: "command", command: "bid", text: "Bidding is coming soon. Stay tuned."}},
+           socket}
+        else
+          {:reply,
+           {:error, %{reason: "connect_wallet", text: "You need to connect a wallet to bid."}},
+           socket}
+        end
+
+      _ ->
+        {:reply,
+         {:error,
+          %{reason: "unknown_command", text: "Unknown command: /#{command}. Type /help for available commands."}},
+         socket}
+    end
+  end
+
   defp presence_meta(socket, params) do
+    user = socket.assigns[:current_user]
+
     %{
       id: socket.id,
-      name: param_or_default(params, "name", "Guest"),
-      color: param_or_default(params, "color", "#ff5500"),
+      name: user && user.display_name || param_or_default(params, "name", "Guest"),
+      color: user && user.avatar_color || param_or_default(params, "color", "#ff5500"),
       x: 0.0,
       z: 0.0
     }

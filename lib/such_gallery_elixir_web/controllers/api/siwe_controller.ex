@@ -21,6 +21,8 @@ defmodule SuchGalleryElixirWeb.Api.SiweController do
 
     case Accounts.verify_siwe(message, signature, stored_nonce) do
       {:ok, user} ->
+        user = Accounts.refresh_ens(user)
+
         conn
         |> put_session(:user_id, user.id)
         |> put_session(:siwe_nonce, nil)
