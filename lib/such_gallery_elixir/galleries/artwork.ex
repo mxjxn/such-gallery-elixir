@@ -23,20 +23,24 @@ defmodule SuchGalleryElixir.Galleries.Artwork do
   @metadata_statuses [:pending, :resolved, :failed]
 
   schema "artworks" do
-    field :artwork_url, :string
-    field :title, :string
-    field :artist, :string
-    field :external_id, :string
-    field :aspect_ratio, :float
-    field :description, :string
-    field :animation_url, :string
+    field(:artwork_url, :string)
+    field(:title, :string)
+    field(:artist, :string)
+    field(:external_id, :string)
+    field(:aspect_ratio, :float)
+    field(:description, :string)
+    field(:animation_url, :string)
 
-    field :source_type, Ecto.Enum, values: @source_types, default: :url
-    field :source_ref, :string
-    field :metadata_status, Ecto.Enum, values: @metadata_statuses, default: :pending
-    field :listing_meta, :map
+    field(:source_type, Ecto.Enum, values: @source_types, default: :url)
+    field(:source_ref, :string)
+    field(:metadata_status, Ecto.Enum, values: @metadata_statuses, default: :pending)
+    field(:listing_meta, :map)
+    field(:chain_id, :integer)
+    field(:contract_address, :string)
+    field(:token_id, :string)
+    field(:canonical_media_uri, :string)
 
-    has_many :placements, SuchGalleryElixir.Galleries.ArtworkPlacement
+    has_many(:placements, SuchGalleryElixir.Galleries.ArtworkPlacement)
 
     timestamps(type: :utc_datetime)
   end
@@ -55,7 +59,11 @@ defmodule SuchGalleryElixir.Galleries.Artwork do
       :source_type,
       :source_ref,
       :metadata_status,
-      :listing_meta
+      :listing_meta,
+      :chain_id,
+      :contract_address,
+      :token_id,
+      :canonical_media_uri
     ])
     |> validate_required([:artwork_url, :source_type])
     |> validate_number(:aspect_ratio, greater_than: 0)
@@ -76,7 +84,11 @@ defmodule SuchGalleryElixir.Galleries.Artwork do
       :artwork_url,
       :aspect_ratio,
       :metadata_status,
-      :listing_meta
+      :listing_meta,
+      :chain_id,
+      :contract_address,
+      :token_id,
+      :canonical_media_uri
     ])
   end
 end

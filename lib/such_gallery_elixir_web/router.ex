@@ -2,69 +2,83 @@ defmodule SuchGalleryElixirWeb.Router do
   use SuchGalleryElixirWeb, :router
 
   pipeline :browser do
-    plug :accepts, ["html"]
-    plug :fetch_session
-    plug :fetch_live_flash
-    plug :put_root_layout, html: {SuchGalleryElixirWeb.Layouts, :root}
-    plug :protect_from_forgery
-    plug :put_secure_browser_headers
-    plug SuchGalleryElixirWeb.Plugs.AssignCurrentUser
+    plug(:accepts, ["html"])
+    plug(:fetch_session)
+    plug(:fetch_live_flash)
+    plug(:put_root_layout, html: {SuchGalleryElixirWeb.Layouts, :root})
+    plug(:protect_from_forgery)
+    plug(:put_secure_browser_headers)
+    plug(SuchGalleryElixirWeb.Plugs.AssignCurrentUser)
   end
 
   pipeline :api do
-    plug :accepts, ["json"]
-    plug :fetch_session
+    plug(:accepts, ["json"])
+    plug(:fetch_session)
   end
 
   pipeline :authenticated do
-    plug :accepts, ["html"]
-    plug :fetch_session
-    plug :fetch_live_flash
-    plug :put_root_layout, html: {SuchGalleryElixirWeb.Layouts, :root}
-    plug :protect_from_forgery
-    plug :put_secure_browser_headers
-    plug SuchGalleryElixirWeb.Plugs.AssignCurrentUser
-    plug SuchGalleryElixirWeb.Plugs.RequireAuth
+    plug(:accepts, ["html"])
+    plug(:fetch_session)
+    plug(:fetch_live_flash)
+    plug(:put_root_layout, html: {SuchGalleryElixirWeb.Layouts, :root})
+    plug(:protect_from_forgery)
+    plug(:put_secure_browser_headers)
+    plug(SuchGalleryElixirWeb.Plugs.AssignCurrentUser)
+    plug(SuchGalleryElixirWeb.Plugs.RequireAuth)
   end
 
   pipeline :api_auth do
-    plug :accepts, ["json"]
-    plug :fetch_session
-    plug SuchGalleryElixirWeb.Plugs.RequireAuth
+    plug(:accepts, ["json"])
+    plug(:fetch_session)
+    plug(SuchGalleryElixirWeb.Plugs.RequireAuth)
   end
 
   scope "/api/siwe", SuchGalleryElixirWeb.Api do
-    pipe_through :api
+    pipe_through(:api)
 
-    post "/nonce", SiweController, :nonce
-    post "/verify", SiweController, :verify
-    post "/checksum", SiweController, :checksum
-    delete "/session", SiweController, :logout
-    get "/me", SiweController, :me
+    post("/nonce", SiweController, :nonce)
+    post("/verify", SiweController, :verify)
+    post("/checksum", SiweController, :checksum)
+    delete("/session", SiweController, :logout)
+    get("/me", SiweController, :me)
   end
 
   scope "/", SuchGalleryElixirWeb do
-    pipe_through :browser
+    pipe_through(:browser)
 
-    live "/", GalleryLive.Index, :index
-    get "/gallery/:slug/walk", PageController, :walk
-    live "/gallery/:slug", GalleryLive.Show, :show
+    live("/", GalleryLive.Index, :index)
+    get("/gallery/:slug/walk", PageController, :walk)
+    live("/gallery/:slug", GalleryLive.Show, :show)
   end
 
   scope "/", SuchGalleryElixirWeb do
-    pipe_through :authenticated
+    pipe_through(:authenticated)
 
-    live "/galleries/new", GalleryLive.Form, :new
-    live "/galleries/:slug/edit", GalleryLive.Form, :edit
-    live "/galleries/:slug/curate", GalleryLive.Curate, :index
+    live("/galleries/new", GalleryLive.Form, :new)
+    live("/galleries/:slug/edit", GalleryLive.Form, :edit)
+    live("/galleries/:slug/curate", GalleryLive.Curate, :index)
   end
 
   scope "/api/artwork", SuchGalleryElixirWeb.Controllers.API do
-    pipe_through :api_auth
+    pipe_through(:api_auth)
 
-    post "/resolve", ArtworkController, :resolve
-    get "/browse", ArtworkController, :browse
-    get "/lookup", ArtworkController, :lookup
+    post("/resolve", ArtworkController, :resolve)
+    get("/browse", ArtworkController, :browse)
+    get("/lookup", ArtworkController, :lookup)
+  end
+
+  scope "/api/v1/exhibitions", SuchGalleryElixirWeb.Controllers.API do
+    pipe_through(:api)
+
+    get("/:slug", ExhibitionController, :show)
+    get("/:slug/manifest/:revision", ExhibitionController, :revision)
+  end
+
+  scope "/api/v1/exhibitions", SuchGalleryElixirWeb.Controllers.API do
+    pipe_through(:api_auth)
+
+    post("/:slug/publish", ExhibitionController, :publish)
+    delete("/:slug/publication", ExhibitionController, :unpublish)
   end
 
   # Enable LiveDashboard in development
@@ -77,9 +91,9 @@ defmodule SuchGalleryElixirWeb.Router do
     import Phoenix.LiveDashboard.Router
 
     scope "/dev" do
-      pipe_through :browser
+      pipe_through(:browser)
 
-      live_dashboard "/dashboard", metrics: SuchGalleryElixirWeb.Telemetry
+      live_dashboard("/dashboard", metrics: SuchGalleryElixirWeb.Telemetry)
     end
   end
 end

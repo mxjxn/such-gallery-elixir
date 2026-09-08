@@ -11,18 +11,20 @@ defmodule SuchGalleryElixir.Galleries.Gallery do
   @frame_styles ~w(classic minimal ornate)a
 
   schema "galleries" do
-    field :name, :string
-    field :slug, :string
-    field :description, :string
-    field :wall_color, :string, default: "#f5f5f0"
-    field :frame_style, Ecto.Enum, values: @frame_styles, default: :classic
-    field :width_override, :float
-    field :depth_override, :float
+    field(:name, :string)
+    field(:slug, :string)
+    field(:description, :string)
+    field(:wall_color, :string, default: "#f5f5f0")
+    field(:frame_style, Ecto.Enum, values: @frame_styles, default: :classic)
+    field(:width_override, :float)
+    field(:depth_override, :float)
+    field(:published_revision, :integer)
 
-    belongs_to :template, SuchGalleryElixir.Galleries.GalleryTemplate
-    belongs_to :owner, SuchGalleryElixir.Accounts.User
-    has_many :artwork_placements, SuchGalleryElixir.Galleries.ArtworkPlacement
-    has_many :chat_messages, SuchGalleryElixir.Galleries.ChatMessage
+    belongs_to(:template, SuchGalleryElixir.Galleries.GalleryTemplate)
+    belongs_to(:owner, SuchGalleryElixir.Accounts.User)
+    has_many(:artwork_placements, SuchGalleryElixir.Galleries.ArtworkPlacement)
+    has_many(:chat_messages, SuchGalleryElixir.Galleries.ChatMessage)
+    has_many(:publications, SuchGalleryElixir.Galleries.GalleryPublication)
 
     timestamps(type: :utc_datetime)
   end

@@ -19,7 +19,11 @@ defmodule SuchGalleryElixir.Galleries.ArtworkResolver do
   alias SuchGalleryElixir.Repo
   alias SuchGalleryElixir.Galleries.Artwork
 
-  @ipfs_gateway Application.compile_env(:such_gallery_elixir, :ipfs_gateway, "https://ipfs.io/ipfs/")
+  @ipfs_gateway Application.compile_env(
+                  :such_gallery_elixir,
+                  :ipfs_gateway,
+                  "https://ipfs.io/ipfs/"
+                )
 
   @rpc_timeout 10_000
   @http_timeout 15_000
@@ -66,6 +70,10 @@ defmodule SuchGalleryElixir.Galleries.ArtworkResolver do
               |> maybe_put(:title, meta.name)
               |> maybe_put(:description, meta.description)
               |> maybe_put(:animation_url, meta.animation_url)
+              |> Map.put(:chain_id, chain_id)
+              |> Map.put(:contract_address, contract)
+              |> Map.put(:token_id, token_id)
+              |> maybe_put(:canonical_media_uri, meta.image_url)
               |> Map.put(:metadata_status, :resolved)
 
             {:ok, _} = update_artwork(artwork, attrs)
@@ -82,7 +90,8 @@ defmodule SuchGalleryElixir.Galleries.ArtworkResolver do
     end
   end
 
-  def resolve(%Artwork{source_type: :auction_listing, source_ref: ref} = artwork) when is_binary(ref) do
+  def resolve(%Artwork{source_type: :auction_listing, source_ref: ref} = artwork)
+      when is_binary(ref) do
     case parse_auction_ref(ref) do
       {:ok, chain_id, _contract, _token_id, listing_id} ->
         with {:ok, listing_meta} <- fetch_auction_listing(chain_id, listing_id),
@@ -94,6 +103,10 @@ defmodule SuchGalleryElixir.Galleries.ArtworkResolver do
             |> maybe_put(:title, nft_meta.name)
             |> maybe_put(:description, nft_meta.description)
             |> maybe_put(:animation_url, nft_meta.animation_url)
+            |> Map.put(:chain_id, chain_id)
+            |> Map.put(:contract_address, token_address)
+            |> Map.put(:token_id, token_id)
+            |> maybe_put(:canonical_media_uri, nft_meta.image_url)
             |> Map.put(:listing_meta, listing_meta)
             |> Map.put(:metadata_status, :resolved)
 
@@ -129,7 +142,12 @@ defmodule SuchGalleryElixir.Galleries.ArtworkResolver do
     description = extract_meta(html, "og:description")
     image_url = extract_meta(html, "og:image")
     artist = extract_meta(html, "og:article:author") || extract_meta(html, "og:site_name")
-    aspect_ratio = parse_aspect_ratio(extract_meta(html, "og:image:width"), extract_meta(html, "og:image:height"))
+
+    aspect_ratio =
+      parse_aspect_ratio(
+        extract_meta(html, "og:image:width"),
+        extract_meta(html, "og:image:height")
+      )
 
     %{
       title: title,
@@ -141,7 +159,10 @@ defmodule SuchGalleryElixir.Galleries.ArtworkResolver do
   end
 
   defp extract_meta(html, property) do
-    Regex.run(~r/<meta\s+(?:property|name)=["']#{Regex.escape(property)}["']\s+content=["']([^"']*)["']/i, html)
+    Regex.run(
+      ~r/<meta\s+(?:property|name)=["']#{Regex.escape(property)}["']\s+content=["']([^"']*)["']/i,
+      html
+    )
     |> case do
       [_, val] -> val
       _ -> nil
@@ -208,7 +229,8 @@ defmodule SuchGalleryElixir.Galleries.ArtworkResolver do
                name: json["name"],
                description: json["description"],
                image_url: if(is_binary(raw_image), do: resolve_uri(raw_image), else: nil),
-               animation_url: if(is_binary(raw_animation), do: resolve_uri(raw_animation), else: nil),
+               animation_url:
+                 if(is_binary(raw_animation), do: resolve_uri(raw_animation), else: nil),
                attributes: json["attributes"] || json["properties"]
              }}
 
@@ -245,6 +267,7 @@ defmodule SuchGalleryElixir.Galleries.ArtworkResolver do
 
           # Fetch current price separately
           price_data = @get_current_price_selector <> pad_left(to_hex(listing_id), 64)
+
           current_price =
             case eth_call(rpc_url, marketplace_addr, price_data) do
               {:ok, price_hex} when is_binary(price_hex) and price_hex != "0x" ->
@@ -294,9 +317,14 @@ defmodule SuchGalleryElixir.Galleries.ArtworkResolver do
 
   defp rpc_url_for_chain(chain_id) do
     case chain_id do
-      1 -> Application.get_env(:such_gallery_elixir, :ethereum_rpc_url, "https://eth.llamarpc.com")
-      8453 -> Application.get_env(:such_gallery_elixir, :base_rpc_url, "https://mainnet.base.org")
-      _ -> Application.get_env(:such_gallery_elixir, :rpc_url)
+      1 ->
+        Application.get_env(:such_gallery_elixir, :ethereum_rpc_url, "https://eth.llamarpc.com")
+
+      8453 ->
+        Application.get_env(:such_gallery_elixir, :base_rpc_url, "https://mainnet.base.org")
+
+      _ ->
+        Application.get_env(:such_gallery_elixir, :rpc_url)
     end
   end
 

@@ -12,17 +12,18 @@ defmodule SuchGalleryElixir.Galleries.ArtworkPlacement do
   @walls ~w(back left right front)a
 
   schema "artwork_placements" do
-    field :kind, Ecto.Enum, values: @kinds
-    field :display_order, :integer
-    field :override_wall, Ecto.Enum, values: @walls
-    field :override_u, :float
-    field :override_v, :float
-    field :override_rotation_y, :float
-    field :override_scale, :float
+    field(:kind, Ecto.Enum, values: @kinds)
+    field(:display_order, :integer)
+    field(:override_wall, Ecto.Enum, values: @walls)
+    field(:override_u, :float)
+    field(:override_v, :float)
+    field(:override_rotation_y, :float)
+    field(:override_scale, :float)
+    field(:caption, :string)
 
-    belongs_to :gallery, SuchGalleryElixir.Galleries.Gallery
-    belongs_to :artwork, SuchGalleryElixir.Galleries.Artwork
-    belongs_to :layout_slot, SuchGalleryElixir.Galleries.LayoutSlot
+    belongs_to(:gallery, SuchGalleryElixir.Galleries.Gallery)
+    belongs_to(:artwork, SuchGalleryElixir.Galleries.Artwork)
+    belongs_to(:layout_slot, SuchGalleryElixir.Galleries.LayoutSlot)
 
     timestamps(type: :utc_datetime)
   end
@@ -40,7 +41,8 @@ defmodule SuchGalleryElixir.Galleries.ArtworkPlacement do
       :override_u,
       :override_v,
       :override_rotation_y,
-      :override_scale
+      :override_scale,
+      :caption
     ])
     |> validate_required([:kind, :display_order, :gallery_id, :artwork_id])
     |> validate_kind_fields()

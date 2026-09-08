@@ -10,10 +10,12 @@ defmodule SuchGalleryElixir.Galleries do
     ArtworkPlacement,
     ChatMessage,
     Gallery,
+    GalleryPublication,
     GalleryTemplate,
     LayoutSlot,
     PlacementResolver
   }
+
   alias SuchGalleryElixir.Galleries.InputParser
   alias SuchGalleryElixir.Galleries.ArtworkResolver
 
@@ -27,6 +29,121 @@ defmodule SuchGalleryElixir.Galleries do
     template: :layout_slots,
     artwork_placements: [:artwork, :layout_slot]
   ]
+
+  @doc "Publishes a new immutable revision of a gallery and makes it current."
+  def publish_gallery(%Gallery{} = gallery) do
+    Repo.transaction(fn ->
+      gallery =
+        Gallery
+        |> where([g], g.id == ^gallery.id)
+        |> lock("FOR UPDATE")
+        |> preload(^@gallery_preloads)
+        |> Repo.one!()
+
+      revision = next_publication_revision(gallery.id)
+      published_at = DateTime.utc_now() |> DateTime.truncate(:microsecond)
+      manifest = exhibition_manifest(gallery, revision, published_at)
+
+      publication =
+        %GalleryPublication{}
+        |> GalleryPublication.changeset(%{
+          gallery_id: gallery.id,
+          revision: revision,
+          manifest: manifest,
+          published_at: published_at
+        })
+        |> Repo.insert!()
+
+      gallery
+      |> Ecto.Changeset.change(published_revision: revision)
+      |> Repo.update!()
+
+      publication
+    end)
+  end
+
+  @doc "Removes the public pointer while preserving every published revision."
+  def unpublish_gallery(%Gallery{} = gallery) do
+    {1, _} =
+      Gallery
+      |> where([g], g.id == ^gallery.id)
+      |> Repo.update_all(set: [published_revision: nil])
+
+    {:ok, %{gallery | published_revision: nil}}
+  end
+
+  @doc "Returns the currently published exhibition manifest for a slug."
+  def get_published_exhibition_by_slug(slug) when is_binary(slug) do
+    GalleryPublication
+    |> join(:inner, [p], g in Gallery, on: g.id == p.gallery_id)
+    |> where([p, g], g.slug == ^slug and p.revision == g.published_revision)
+    |> select([p], p)
+    |> Repo.one()
+  end
+
+  @doc "Returns one immutable exhibition revision by gallery slug."
+  def get_publication_by_slug_and_revision(slug, revision)
+      when is_binary(slug) and is_integer(revision) do
+    GalleryPublication
+    |> join(:inner, [p], g in Gallery, on: g.id == p.gallery_id)
+    |> where([p, g], g.slug == ^slug and p.revision == ^revision)
+    |> select([p], p)
+    |> Repo.one()
+  end
+
+  @doc "Builds the portable public representation stored in a publication."
+  def exhibition_manifest(%Gallery{} = gallery, revision, %DateTime{} = published_at) do
+    gallery = Repo.preload(gallery, @gallery_preloads)
+
+    %{
+      "schemaVersion" => 1,
+      "revision" => revision,
+      "publishedAt" => DateTime.to_iso8601(published_at),
+      "gallery" => %{
+        "slug" => gallery.slug,
+        "title" => gallery.name,
+        "description" => gallery.description,
+        "curator" => curator_manifest(gallery.owner),
+        "placements" => Enum.map(list_placements(gallery), &placement_manifest/1)
+      }
+    }
+  end
+
+  defp next_publication_revision(gallery_id) do
+    GalleryPublication
+    |> where([p], p.gallery_id == ^gallery_id)
+    |> select([p], max(p.revision))
+    |> Repo.one()
+    |> Kernel.||(0)
+    |> Kernel.+(1)
+  end
+
+  defp curator_manifest(nil), do: nil
+
+  defp curator_manifest(owner) do
+    %{"walletAddress" => owner.wallet_address, "displayName" => owner.display_name}
+  end
+
+  defp placement_manifest(placement) do
+    artwork = placement.artwork
+
+    %{
+      "displayOrder" => placement.display_order,
+      "caption" => placement.caption,
+      "artwork" => %{
+        "chainId" => artwork.chain_id,
+        "contractAddress" => artwork.contract_address,
+        "tokenId" => artwork.token_id,
+        "title" => artwork.title,
+        "artist" => artwork.artist,
+        "canonicalMediaUri" => artwork.canonical_media_uri,
+        "previewUrl" => artwork.artwork_url,
+        "animationUrl" => artwork.animation_url,
+        "sourceType" => to_string(artwork.source_type),
+        "sourceRef" => artwork.source_ref
+      }
+    }
+  end
 
   @doc """
   Fetches a gallery by slug with template, slots, placements, and artworks preloaded.
@@ -83,7 +200,12 @@ defmodule SuchGalleryElixir.Galleries do
   @doc """
   Assigns an artwork to a predefined layout slot on a gallery.
   """
-  def assign_artwork_to_slot(%Gallery{} = gallery, %Artwork{} = artwork, %LayoutSlot{} = slot, display_order)
+  def assign_artwork_to_slot(
+        %Gallery{} = gallery,
+        %Artwork{} = artwork,
+        %LayoutSlot{} = slot,
+        display_order
+      )
       when is_integer(display_order) do
     with :ok <- ensure_slot_belongs_to_gallery(gallery, slot),
          :ok <- ensure_slot_available(gallery, slot) do
@@ -180,11 +302,13 @@ defmodule SuchGalleryElixir.Galleries do
 
       template ->
         # Normalize to string keys to avoid mixed-key CastError when merging
-        attrs = if is_map(attrs) and not is_struct(attrs) do
-          for {k, v} <- attrs, into: %{}, do: {to_string(k), v}
-        else
-          attrs
-        end
+        attrs =
+          if is_map(attrs) and not is_struct(attrs) do
+            for {k, v} <- attrs, into: %{}, do: {to_string(k), v}
+          else
+            attrs
+          end
+
         attrs = Map.put(attrs, "template_id", template.id)
 
         %Gallery{}
@@ -228,7 +352,8 @@ defmodule SuchGalleryElixir.Galleries do
     free_count = length(free_slots)
 
     if free_count == 0 do
-      {:ok, %{placed: [], skipped: Enum.map(inputs, &elem(InputParser.parse(&1), 1) |> elem(1))}}
+      {:ok,
+       %{placed: [], skipped: Enum.map(inputs, &(elem(InputParser.parse(&1), 1) |> elem(1)))}}
     else
       # 2. Parse and dedup inputs
       parsed =
@@ -251,14 +376,17 @@ defmodule SuchGalleryElixir.Galleries do
                 # Create new artwork with pending status
                 initial_url = if source_type == :url, do: source_ref, else: nil
 
-                {:ok, art} =
-                  create_artwork(%{
+                attrs =
+                  %{
                     artwork_url: initial_url,
                     source_type: source_type,
                     source_ref: source_ref,
                     external_id: nft_identity(source_type, source_ref),
                     metadata_status: :pending
-                  })
+                  }
+                  |> Map.merge(identity_attrs(source_type, source_ref))
+
+                {:ok, art} = create_artwork(attrs)
 
                 art
 
@@ -291,7 +419,14 @@ defmodule SuchGalleryElixir.Galleries do
           end
         end)
 
-      {:ok, %{placed: placed |> Enum.reverse() |> Enum.map(fn {art, ref, _slot} -> %{artwork: art, source_ref: ref} end), skipped: skipped}}
+      {:ok,
+       %{
+         placed:
+           placed
+           |> Enum.reverse()
+           |> Enum.map(fn {art, ref, _slot} -> %{artwork: art, source_ref: ref} end),
+         skipped: skipped
+       }}
     end
   end
 
@@ -311,6 +446,36 @@ defmodule SuchGalleryElixir.Galleries do
 
       _ ->
         ref
+    end
+  end
+
+  defp identity_attrs(:url, _ref), do: %{}
+
+  defp identity_attrs(:nft_ref, ref) do
+    case String.split(ref, ":", parts: 4) do
+      ["nft", chain, contract, token_id] ->
+        with {chain_id, ""} <- Integer.parse(chain) do
+          %{chain_id: chain_id, contract_address: String.downcase(contract), token_id: token_id}
+        else
+          _ -> %{}
+        end
+
+      _ ->
+        %{}
+    end
+  end
+
+  defp identity_attrs(:auction_listing, ref) do
+    case String.split(ref, ":") do
+      ["auction", chain, contract, token_id, _listing_id] ->
+        with {chain_id, ""} <- Integer.parse(chain) do
+          %{chain_id: chain_id, contract_address: String.downcase(contract), token_id: token_id}
+        else
+          _ -> %{}
+        end
+
+      _ ->
+        %{}
     end
   end
 
@@ -336,8 +501,10 @@ defmodule SuchGalleryElixir.Galleries do
     Enum.find(free_slots, fn %LayoutSlot{id: id} -> id not in used_slot_ids end)
   end
 
-  defp ensure_slot_belongs_to_gallery(%Gallery{template_id: template_id}, %LayoutSlot{template_id: template_id}),
-    do: :ok
+  defp ensure_slot_belongs_to_gallery(%Gallery{template_id: template_id}, %LayoutSlot{
+         template_id: template_id
+       }),
+       do: :ok
 
   defp ensure_slot_belongs_to_gallery(_, _),
     do: {:error, :slot_template_mismatch}
